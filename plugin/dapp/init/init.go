@@ -10,6 +10,7 @@ import (
 	_ "github.com/33cn/plugin/plugin/dapp/paracross" //auto gen
 	_ "github.com/33cn/plugin/plugin/dapp/retrieve"  //auto gen
 	_ "github.com/33cn/plugin/plugin/dapp/rollup"    //auto gen
+	_ "github.com/33cn/plugin/plugin/dapp/ticket"    //auto gen (ycc 迁移: pos33 -> ticket)
 	_ "github.com/33cn/plugin/plugin/dapp/token"     //auto gen
 	_ "github.com/33cn/plugin/plugin/dapp/trade"     //auto gen
 	_ "github.com/33cn/plugin/plugin/dapp/unfreeze"  //auto gen

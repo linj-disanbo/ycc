@@ -90,11 +90,15 @@ pricePower=1     #常量比例
 poolCacheSize = 1024000
 
 [consensus]
-name="pos33"
+name="ticket"
 minerstart=true
 genesisBlockTime=1652797628
 genesis="0xf39e69a8f2c1041edd7616cf079c7084bb7a5242"
-minerExecs=["pos33"]
+minerExecs=["ticket"]
+
+[consensus.sub.ticket]
+genesisBlockTime=1787557086
+flushTicketInterval=3600
 
 [consensus.sub.pos33]
 onlyVoter = false
@@ -108,7 +112,8 @@ count=1000
 [mver.consensus]
 addWalletTx = false
 fundKeyAddr = "0x92dd51393c77fd07c5840ae28076b7e0f072c289"
-powLimitBits = "0x1f00ffff"
+powLimitBits = "0x1e528e0c"  # 真实链 40645 票 @5s（transform/calib 解析公式标定）
+maxTxNumber = 30000         # 必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）
 
 [mver.consensus.pos33]
 ticketPrice1=10000
@@ -118,6 +123,18 @@ rewardTransfer=1
 blockReward=15
 voteRewardPersent=25
 mineRewardPersent=11
+
+[mver.consensus.ticket]
+coinReward = 75
+coinDevFund = 1
+ticketPrice = 100000   # 与 ycc pos33 一致（UseEntrust=0 → 全程 ticketPrice2=100000）
+futureBlockTime = 16
+ticketFrozenTime = 5
+ticketWithdrawTime = 10
+ticketMinerWaitTime = 2
+targetTimespan = 2304
+targetTimePerBlock = 5
+retargetAdjustmentFactor = 4
 
 [store]
 dbCache = 256
