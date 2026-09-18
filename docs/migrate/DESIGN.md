@@ -1,7 +1,7 @@
 # ycc 链"减少存储重跑"迁移设计（pos33 → ticket，5s 出块，状态保留）
 
-> 2026-08-24 定稿并本地端到端验证通过（go1.18 构建，单节点 ticket 链实测 5s 出块、奖励发放、票状态流转）。
-> 用户明确约束：票面价沿用 ycc（ticketPrice=100000）；收益参数按实际评估；**ycc 总量不变**（不增发不销毁）；chainID 必须变更防重放。
+> 2026-08-24 定稿并本地端到端验证通过（go1.18 构建，单节点 ticket 链实测 5s 出块、奖励发放、票状态流转）。2026-09-18 参数定稿。
+> 用户明确约束：票面价沿用 ycc（ticketPrice=100000，即 **10 万 ycc/张**）；收益参数按实际评估（**已定稿：coinReward=43 / coinDevFund=26，bty 5:3，总增发与旧链相近，见 REWARD.md**）；**ycc 总量不变**（不增发不销毁）；chainID 必须变更防重放（**已定稿 1000**）。
 
 ## 1. 现状
 
@@ -69,7 +69,9 @@ build   -datadir <新datadir> -state out/state.bin -local out/local.bin
 5. 删除全部 `mavl-pos33-*` 键；其余状态原样保留。
 6. 校验：coins 主余额合计前后相等（实测合成 2000 万 ycc 精确守恒）。
 
-### 4.3 必需代码改动（01-ycc-code-changes.patch）
+### 4.3 必需代码改动（原 01-ycc-code-changes.patch，已应用并提交到 ycc 仓库 `new-ycc` 分支）
+
+> 该补丁文件已不单独保留（交付物已迁入 ycc 仓库）；需要差分时 `git diff 25310e5..new-ycc`。
 
 1. `plugin/consensus/init/init.go`：注册 ticket 共识（ycc fork 版）。
 2. `plugin/dapp/init/init.go`：注册 ticket 执行器（33cn/plugin 原版即可）。
@@ -81,8 +83,8 @@ build   -datadir <新datadir> -state out/state.bin -local out/local.bin
 
 ### 5.1 chainID / evmChainID
 
-- `ChainID = 1000`（默认提案，≠999 即可防重放；ycc.toml 新增键，可配置）
-- `[crypto.sub.secp256k1eth] evmChainID = 4000`（同步更换防 EVM 侧重放）
+- `ChainID = 1000`（**2026-09-18 定稿**，≠999 防重放；ycc.toml 可配置）
+- `[crypto.sub.secp256k1eth] evmChainID = 4000`（**2026-09-18 定稿**，同步更换防 EVM 侧重放）
 
 ### 5.2 共识与出块
 
@@ -90,11 +92,12 @@ build   -datadir <新datadir> -state out/state.bin -local out/local.bin
 [consensus]  name="ticket"  minerstart=true  minerExecs=["ticket"]
 [consensus.sub.ticket]  genesisBlockTime=<迁移时刻>  flushTicketInterval=3600   # 无 genesis 票：状态预载
 [mver.consensus.ticket]
-  coinReward=75  coinDevFund=1  ticketPrice=100000  futureBlockTime=16
+  coinReward=43  coinDevFund=26  ticketPrice=100000  futureBlockTime=16
   ticketFrozenTime=5  ticketWithdrawTime=10  ticketMinerWaitTime=2
   targetTimespan=2304  targetTimePerBlock=5  retargetAdjustmentFactor=4
 ```
-> coinReward=75 = 旧 pos33 blockReward=15 × 5（5s/块下保持单位时间增发率近似）；coinDevFund 最小 1（CheckAmount 要求 >0）。数值待用户最终确认。
+> **2026-09-18 参数定稿**（推导见 REWARD.md）：每块增发 = coinReward 43（挖矿奖励，进票的 ReturnAddress）+ coinDevFund 26（发展基金，`ForkTicketFundAddrV1=-1` 恒启用 → ExecIssueCoins 增发给 fundKeyAddr）= **69 ycc/5s ≈ 13.8 ycc/s**，与旧链 pos33（15 ycc/~1.09s ≈ 13.8 ycc/s、4.34 亿/年）相近；比例 43:26 ≈ bty 口径 **5:3**。ticketPrice=100000（10 万 ycc/张，与 pos33 `ticketPrice2` 一致）。
+> 注意两个参数必须为**整数**：TOML 写 `43.0` 会被解析成 float64，`MGInt`/`parseInt` 只认 int64 → 静默取 0（实测 `coinDevFund=100.0` 解析为 0）。
 
 ### 5.3 powLimitBits 校准（重要，解析公式，已实测验证）
 
@@ -110,6 +113,8 @@ b 字节哈希 → currentdiff ∈ [2^(8b-8), 2^(8b))，P(字节长 b)=(1/256)^(
 > 早期用蒙特卡洛模拟标定，低 P 区间（P<1e-5）试次不足测不准——已弃用，统一用解析公式。
 
 ## 6. 本地验证结果（2026-08-24，单节点；含干净仓库全流程复现）
+
+> 注：以下为 2026-08-24 验证时的记录，当时配置 coinReward=75；**2026-09-18 定稿 coinReward=43 / coinDevFund=26**（验证结论不受影响，机制相同）。
 
 - 合成旧状态（3 账户 + pos33 质押 1000 万 ycc + 奖励池）→ 转换 → 构建 → 新链启动：
   - 余额精确：矿工 595 / 委托人 5120 / 用户 3000 / pos33 池 265 / ticket 区域冻结 20000（ycc 单位，总量 28980 前后守恒）

@@ -125,9 +125,9 @@ voteRewardPersent=25
 mineRewardPersent=11
 
 [mver.consensus.ticket]
-coinReward = 75
-coinDevFund = 1
-ticketPrice = 100000   # 与 ycc pos33 一致（UseEntrust=0 → 全程 ticketPrice2=100000）
+coinReward = 43        # 2026-09-18 定稿：每块挖矿奖励 43 ycc（新链 5s 块，总增发 69 ycc/块 ≈ 旧 pos33 13.8 ycc/s；bty 口径 5:3 的 5）
+coinDevFund = 26       # 2026-09-18 定稿：每块发展基金 26 ycc（5:3 的 3，增发给 fundKeyAddr；必须是整数——写成 26.0 会被 toml 解析为 float64 → MGInt 返回 0）
+ticketPrice = 100000   # 与 ycc pos33 一致（UseEntrust=0 → 全程 ticketPrice2=100000），即 10 万 ycc/张
 futureBlockTime = 16
 ticketFrozenTime = 5
 ticketWithdrawTime = 10

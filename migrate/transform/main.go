@@ -24,8 +24,8 @@ import (
 	"github.com/33cn/chain33/system/address/eth"
 	"github.com/33cn/chain33/types"
 	tickettypes "github.com/33cn/plugin/plugin/dapp/ticket/types"
-	pos33types "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 	"github.com/yccproject/ycc/migrate"
+	pos33types "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 )
 
 const (
@@ -105,20 +105,20 @@ func main() {
 	}
 	// 新链配置片段（ticket genesis 不需要：状态已含全部票）
 	cfg := map[string]interface{}{
-		"chainID":              "待定（须 ≠999）",
-		"consensus":            "ticket",
-		"minerExecs":           []string{"ticket"},
-		"ticketPrice(ycc)":     *ticketPrice,
-		"targetTimePerBlock":   "5（5 秒出块）",
-		"pos33ExecAddr":        pos33ExecAddr,
-		"ticketExecAddr":       ticketExecAddr,
-		"票数":                  tr.ticketCount,
-		"票价值(最小单位)":         tr.ticketValue,
-		"质押退款(最小单位)":        tr.refundTotal,
-		"奖励发放(最小单位)":        tr.rewardTotal,
-		"pos33执行器余额留存(最小单位)": tr.pos33PoolLeft,
+		"chainID":            1000, // 2026-09-18 定稿（≠999，防重放）
+		"consensus":          "ticket",
+		"minerExecs":         []string{"ticket"},
+		"ticketPrice(ycc)":   *ticketPrice,
+		"targetTimePerBlock": "5（5 秒出块）",
+		"pos33ExecAddr":      pos33ExecAddr,
+		"ticketExecAddr":     ticketExecAddr,
+		"票数":                 tr.ticketCount,
+		"票价值(最小单位)":          tr.ticketValue,
+		"质押退款(最小单位)":         tr.refundTotal,
+		"奖励发放(最小单位)":         tr.rewardTotal,
+		"pos33执行器余额留存(最小单位)":      tr.pos33PoolLeft,
 		"ticket执行器主余额(票值托管,最小单位)": tr.ticketValue,
-		"建议powLimitBits":      recommendBits(tr.ticketCount),
+		"建议powLimitBits":          recommendBits(tr.ticketCount),
 	}
 	cfgJSON, _ := json.MarshalIndent(cfg, "", "  ")
 	os.WriteFile(*outDir+"/summary.json", cfgJSON, 0o644)
@@ -147,14 +147,14 @@ type transformer struct {
 	stateKVs []*types.KeyValue
 	localKVs []*types.KeyValue
 
-	ticketCount  int64
-	ticketValue  int64
-	refundTotal  int64
-	rewardTotal  int64
+	ticketCount   int64
+	ticketValue   int64
+	refundTotal   int64
+	rewardTotal   int64
 	pos33PoolLeft int64
 	// 票 ID 序号按矿工全局累计（同一矿工多个委托人时 ID 必须唯一，否则 state 键覆盖丢票）
 	ticketSeq map[string]int64
-	report     reportBuilder
+	report    reportBuilder
 }
 
 func (tr *transformer) run() error {
@@ -271,7 +271,10 @@ func (tr *transformer) movePos33Region() error {
 	}
 	sort.Strings(keys)
 	// 区域明细：持有人 -> 应得（frozen+balance）
-	type claim struct{ addr string; amt int64 }
+	type claim struct {
+		addr string
+		amt  int64
+	}
 	var claims []claim
 	var claimsTotal int64
 	for _, k := range keys {
@@ -484,14 +487,14 @@ func (tr *transformer) convertPair(p stakePair) error {
 	for i := int64(0); i < n; i++ {
 		id := prefix + fmt.Sprintf("%010d", seq+i)
 		t := &tickettypes.Ticket{
-			TicketId:       id,
-			Status:         tickettypes.TicketOpened,
-			IsGenesis:      true,
-			MinerAddress:   p.miner,
-			ReturnAddress:  p.consignor,
-			MinerValue:     0,
-			CreateTime:     tr.createTime,
-			Price:          tr.price,
+			TicketId:      id,
+			Status:        tickettypes.TicketOpened,
+			IsGenesis:     true,
+			MinerAddress:  p.miner,
+			ReturnAddress: p.consignor,
+			MinerValue:    0,
+			CreateTime:    tr.createTime,
+			Price:         tr.price,
 		}
 		tr.state[ticketPrefix+id] = types.Encode(t)
 		// 本地票列表（miner 维度，状态=1 可挖）

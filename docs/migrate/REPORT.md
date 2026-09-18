@@ -1,7 +1,7 @@
 # ycc 链"减少存储重跑"迁移项目 —— 完整汇报
 
-> 版本：2026-08-26
-> 状态：技术方案已定稿，真实链备份数据全流程验证通过，待上线部署
+> 版本：2026-08-26（2026-09-18 更新：参数定稿 + 路径同步）
+> 状态：技术方案已定稿、参数已定稿，真实链备份数据全流程验证通过，待上线部署
 > 目标读者：项目组（技术评审/决策）
 
 ---
@@ -114,7 +114,7 @@ new-ycc/kvmvcc/store.db（状态版本0 预载） + new-ycc/blockchain.db（LODB
 
 ## 4. 迁移流程与工具详解
 
-工具源码在 ycc 仓库 `migrate/` 目录，全部为 Go 编写、**静态链接**（`CGO_ENABLED=0`，linux-amd64，服务器零依赖）。编译脚本 `migrate/build.sh` 一键构建 7 个工具。
+工具源码在 ycc 仓库 `migrate/` 目录，全部为 Go 编写、**静态链接**（`CGO_ENABLED=0`，linux-amd64，服务器零依赖）。编译脚本 `migrate/build.sh` 一键构建 8 个工具。
 
 | 工具 | 作用 | 输入 → 输出 |
 |---|---|---|
@@ -124,8 +124,9 @@ new-ycc/kvmvcc/store.db（状态版本0 预载） + new-ycc/blockchain.db（LODB
 | **build** | 新链 datadir 构建 | `state.bin`/`local.bin` → `new-ycc/`（store.db + blockchain.db） |
 | **calib** | 挖矿难度标定 | 票数 + 目标出块时间 → `powLimitBits` |
 | **pos33stat** | pos33 资金分布检查（诊断） | `dump.gob` → 执行器主余额/区域/奖励记账/异常地址 |
+| **ticketdist** | 持票地址分布 Top N（诊断） | `dump.gob`/状态 → 地址/票数/委托矿工排名 |
 | **gendump** | 合成测试数据（测试用） | 参数 → 模拟旧链 dump |
-| **build.sh** | 一键静态编译以上 7 个工具 | — |
+| **build.sh** | 一键静态编译以上 8 个工具 | — |
 
 ### 4.1 export —— 旧链状态导出
 - **原理**：kvmvcc 存所有历史版本的变更键（`.-mvcc-.d.<键>.<版本>`）。遍历该前缀，同一逻辑键**后出现即更高版本**（20 位补零，字典序=数值序），覆盖保留最新值 = 最终状态。
@@ -242,25 +243,26 @@ P(成功) = Σ_{b<e} P(哈希字节长 b) + P(b=e) × clamp((mantissa−2^16)/(2
 
 ### 7.1 内嵌配置（ycc.go，随代码发布）
 ```
-ChainID = 1000（ycc.toml 可配，须 ≠999）
+ChainID = 1000（ycc.toml 可配，须 ≠999）   evmChainID = 4000
 [consensus] name="ticket"  minerstart=true  minerExecs=["ticket"]
 [mver.consensus] maxTxNumber=30000  powLimitBits=0x1e528e0c
 [mver.consensus.ticket]
-  coinReward=75  coinDevFund=1  ticketPrice=100000
+  coinReward=43  coinDevFund=26  ticketPrice=100000
   futureBlockTime=16  ticketFrozenTime=5  ticketWithdrawTime=10  ticketMinerWaitTime=2
   targetTimespan=2304  targetTimePerBlock=5  retargetAdjustmentFactor=4
 [fork.sub.ticket] Enable=0  ForkTicketId=0  ForkTicketVrf=0
 ```
 
-### 7.2 参数说明
+### 7.2 参数说明（2026-09-18 定稿）
 | 参数 | 值 | 依据 |
 |---|---|---|
-| chainID | 1000（建议） | 防重放（≠999）；evmChainID 同步改 4000 |
-| ticketPrice | 100,000 ycc | 与 ycc pos33 一致（UseEntrust=0 → 全程第二档票价） |
-| targetTimePerBlock | 5 | 目标 5s 出块 |
+| chainID | **1000（定稿）** | 防重放（≠999）；evmChainID 同步 4000 |
+| ticketPrice | **100,000 ycc/张（定稿）** | 与 ycc pos33 一致（UseEntrust=0 → 全程第二档票价）；真实数据复核：40,645 张 × 100,000 = 40.645 亿 ycc |
+| targetTimePerBlock | 5（定稿） | 目标 5s 出块 |
 | powLimitBits | 0x1e528e0c | 按真实票数 40,645 解析公式标定（初始窗口），之后难度自调整 |
-| coinReward | 75 ycc/块 | 旧 pos33 15 ycc/块 × 5（5s 出块下保持单位时间增发率近似）；**待项目组确认** |
-| coinDevFund | 1 ycc/块 | 最小有效值（机制要求 >0）；**待项目组确认** |
+| coinReward | **43 ycc/块（定稿）** | 每块挖矿奖励（`miner.Reward = CoinReward + fee`，与共识校验一致）；进票的 ReturnAddress |
+| coinDevFund | **26 ycc/块（定稿）** | 每块发展基金（`ForkTicketFundAddrV1=-1` → 恒启用：由 `ExecIssueCoins` 增发到 fundKeyAddr）。**必须写整数**：TOML 中写成 `26.0` 会解析为 float64，`MGInt` 走 `parseInt` 只认 int64 → 静默变 0 |
+| 每块总增发 | **43 + 26 = 69 ycc / 5s = 13.8 ycc/s（≈4.35 亿/年）** | 与旧链 pos33（15 ycc/~1.09s = 13.8 ycc/s、4.34 亿/年）相近；43:26 ≈ bty 口径 **5:3**；推导见 `docs/migrate/REWARD.md` |
 
 ### 7.3 配置合并机制说明
 chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defalut key" 报错）。共识切换、maxTxNumber、powLimitBits 等**必须写入内嵌 ycc.go**，随二进制发布（与 ycc 现有约定一致："这部分配置随代码发布，不能修改"）。
@@ -290,7 +292,7 @@ chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defal
 7. **上线验证**：出块 ~5s、余额/票抽查与旧链一致、总量守恒、多节点同步一致、旧交易重放被拒
 
 ### 9.2 后续计划
-- [ ] chainID 值、收益参数（coinReward/coinDevFund）项目组确认
+- [x] 参数定稿（2026-09-18）：chainID=1000 / evmChainID=4000 / coinReward=43 / coinDevFund=26（5:3，总增发 69 ycc/块 ≈ 旧链）/ ticketPrice=100000（10 万 ycc/张）
 - [ ] 正式迁移用最新 datadir 重新导出并全流程复验
 - [ ] 双节点/多节点新链同步验证（真实状态）
 - [ ] 脏数据票处理脚本（close）
@@ -298,17 +300,19 @@ chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defal
 
 ---
 
-## 附录 A：交付物清单
+## 附录 A：交付物清单（2026-09-18 路径同步）
 
 | 交付物 | 位置 |
 |---|---|
-| 代码改动补丁 | `ycc-migrate/01-ycc-code-changes.patch`（已应用到 ycc 仓库并提交：7c3b751/3687ce4） |
-| 工具源码 | ycc 仓库 `migrate/`（export/transform/build/verify/calib/gendump/pos33stat + build.sh） |
-| 静态二进制 | `ycc-migrate/static-binaries/`（8 个，linux-amd64 零依赖） |
-| 设计文档 | `ycc-migrate/DESIGN.md` |
-| 操作手册 | `ycc-migrate/RUNBOOK.md` |
-| 真实链验证结果 | `ycc-migrate/test-result4/`（report/summary/state.bin/local.bin/new-ycc datadir） |
-| 本汇报 | `ycc-migrate/REPORT.md` |
+| 新链代码（ticket fork + 内嵌配置） | `~/work/src/chain/ycc-project/ycc/`（分支 `new-ycc`；补丁已应用并提交：7c3b751/3687ce4） |
+| 工具源码 | ycc 仓库 `migrate/`（export/transform/build/verify/calib/gendump/pos33stat/ticketdist + build.sh） |
+| 静态二进制 | `~/work/src/chain/ycc-project/ycc-testdata/static-binaries/`（8 个，linux-amd64 零依赖） |
+| 设计文档 | ycc 仓库 `docs/migrate/DESIGN.md` |
+| 操作手册 | ycc 仓库 `docs/migrate/RUNBOOK.md` |
+| 收益参数定稿推导 | ycc 仓库 `docs/migrate/REWARD.md` |
+| 真实链验证结果 | `~/work/src/chain/ycc-project/ycc-testdata/test-result4/`（report/summary/state.bin/local.bin/new-ycc datadir） |
+| 索引 | ycc 仓库 `docs/migrate/00-INDEX.md` |
+| 本汇报 | ycc 仓库 `docs/migrate/REPORT.md` |
 
 ## 附录 B：构建环境
 - Go 1.18（ycc 依赖 quic-go 要求 go≤1.18）

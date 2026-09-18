@@ -7,8 +7,8 @@
 
 - 需要：一台可访问**已同步旧节点 datadir** 的服务器（导出）、N 台新链节点服务器。
 - 旧链信息（已确认）：chainID=999、CoinSymbol="ycc"、Title="pos33"、共识 pos33、存储 kvmvcc（datadir/kvmvcc/store.db）。
-- 工具：migrate/（export/transform/build/calib），go1.18 构建（`GOROOT=<go1.18> GOMODCACHE=<cache> go build -o bin/ ./migrate/...`）。
-- 新链代码：ycc 仓库应用 `01-ycc-code-changes.patch`（ticket fork + eth 签名修复 + 内嵌配置）。
+- 工具：`migrate/`（export/transform/verify/build/calib/pos33stat/ticketdist/gendump），go1.18 构建（`CGO_ENABLED=0 GOROOT=<go1.18> GOMODCACHE=<cache> GOCACHE=<cache> go build -o bin/ ./migrate/...`）或直接用 `ycc-testdata/static-binaries/` 里的静态二进制。
+- 新链代码：ycc 仓库 `new-ycc` 分支（ticket fork + eth 签名修复 + 内嵌配置，原 `01-ycc-code-changes.patch` 已应用并提交）。
 
 ## 1. 阶段一：状态导出（在旧节点服务器）
 
@@ -34,8 +34,8 @@ transform -in dump.gob -out out/ -symbol ycc -ticketPrice 100000
 ```
 
 **转换策略参数**（如与默认不同，需用户确认）：
-- `-ticketPrice 100000`：票面价（用户明确沿用 ycc）。
-- 质押→票：floor(S/10000) 张，零头退回委托人；未领奖励（委托人 remainReward / 被委托人 fee 分成）从 pos33 奖励池发放，池剩余留存 pos33 执行器地址。
+- `-ticketPrice 100000`：票面价，**10 万 ycc/张**（用户明确沿用 ycc；真实数据复核 40,645 张 × 100,000 = 40.645 亿 ycc）。
+- 质押→票：floor(S/100000) 张，零头退回委托人；未领奖励（委托人 remainReward / 被委托人 fee 分成）从 pos33 奖励池发放，池剩余留存 pos33 执行器地址。
 - 所有余额/区域仅搬运不增减 → 总量守恒（工具强制校验，不守恒即失败）。
 
 ## 3. 阶段三：难度标定（离线）
@@ -57,11 +57,11 @@ build -datadir <新节点datadir> -state out/state.bin -local out/local.bin
 # 生成：<datadir>/kvmvcc/store.db（状态版本0预载）、<datadir>/blockchain.db（LODB 票列表预载）
 ```
 
-**新链配置**（03-new-chain-config-sample.toml 为测试样例；生产以 ycc.go 内嵌配置为准）：
-- ChainID=1000（防重放，须 ≠999）、CoinSymbol="ycc"、[crypto.sub.secp256k1eth] evmChainID=4000
+**新链配置**（原测试样例 `03-new-chain-config-sample.toml` 已不保留；生产以 ycc.go 内嵌配置为准）：
+- ChainID=1000（**定稿**，防重放，须 ≠999）、CoinSymbol="ycc"、[crypto.sub.secp256k1eth] evmChainID=4000（**定稿**）
 - [consensus] name="ticket"、minerExecs=["ticket"]（内嵌 ycc.go 已改）
 - [consensus.sub.ticket]：genesisBlockTime=迁移时刻、无 genesis 票（状态预载）
-- [mver.consensus.ticket]：coinReward=75、coinDevFund=1、ticketPrice=100000、targetTimePerBlock=5（5 秒出块）、其余按设计
+- [mver.consensus.ticket]：coinReward=43、coinDevFund=26（bty 5:3；总增发 69 ycc/块 ≈ 旧链 13.8 ycc/s，推导见 REWARD.md）、ticketPrice=100000、targetTimePerBlock=5（5 秒出块）、其余按设计（**2026-09-18 定稿**）
 - p2p：新网络（新 seeds/端口/频道，与旧链隔离）
 
 **节点启动顺序**：
