@@ -171,7 +171,7 @@ tkCloseCacheLen = 200000
 [crypto]
 
 [crypto.sub.secp256k1eth]
-evmChainID=3999
+evmChainID=4000
 
 [wallet]
 dbCache = 16
