@@ -62,7 +62,6 @@ func main() {
 	setAcc("mavl-coins-ycc-"+addrMiner, &types.Account{Addr: addrMiner, Balance: 500 * coinPrecision})
 	setAcc("mavl-coins-ycc-"+addrConsignor, &types.Account{Addr: addrConsignor, Balance: 100 * coinPrecision})
 	setAcc("mavl-coins-ycc-"+addrUser, &types.Account{Addr: addrUser, Balance: 3000 * coinPrecision})
-	setAcc("mavl-coins-ycc-"+pos33Exec, &types.Account{Addr: pos33Exec, Balance: 300 * coinPrecision})
 	setAcc("mavl-coins-ycc-exec-"+pos33Exec+":"+addrConsignor, &types.Account{Addr: addrConsignor, Balance: 0, Frozen: stake})
 	setAcc("mavl-coins-ycc-exec-"+pos33Exec+":"+addrMiner, &types.Account{Addr: addrMiner, Balance: 0, Frozen: 80 * coinPrecision})
 
@@ -83,6 +82,10 @@ func main() {
 		dump.KVs = append(dump.KVs, &types.KeyValue{Key: []byte("mavl-pos33-consignor-" + string(address.FormatAddrKey(cons[0].Address))), Value: types.Encode(&pos33types.Pos33Consignor{Address: cons[0].Address, Consignees: []*pos33types.Consignee{{Address: maddr, Amount: stake}}})})
 		dump.KVs = append(dump.KVs, &types.KeyValue{Key: []byte("mavl-pos33-" + maddr), Value: types.Encode(&pos33types.Pos33DepositMsg{Maddr: maddr, Raddr: cons[0].Address, Count: stake / price})})
 	}
+
+	// pos33 执行器主余额：与区域明细合计一致（+100 ycc 余量覆盖待发奖励），
+	// 保证 transform 的托管退回按 1:1 执行、总量守恒
+	setAcc("mavl-coins-ycc-"+pos33Exec, &types.Account{Addr: pos33Exec, Balance: totalStake + 100*coinPrecision})
 
 	consignee := &pos33types.Pos33Consignee{
 		Address:        addrMiner,

@@ -322,7 +322,7 @@ ForkRootHash=0
 ForkFormatAddressKey=0
 ForkCheckEthTxSort=36000000
 #chain33 v1.72.0 起要求以下 fork 必须在配置中显式声明（缺失会 panic: system fork X not config）
-#取值规则：bityuan 6.9.1 已开启的 → ycc 新链从高度 0 开启；bityuan 未开启的 → -1 关闭
+#取值规则：参考链（chain33 v1.72.x + plugin v1.74.0）已开启的 fork → ycc 新链从高度 0 开启；未开启的 → -1 关闭
 ForkEthAddressFormat=0
 ForkProxyExec=0
 ForkMaxTxFeeV1=0
