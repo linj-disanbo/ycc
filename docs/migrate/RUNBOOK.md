@@ -61,7 +61,7 @@ build -datadir <新节点datadir> -state out/state.bin -local out/local.bin
 - ChainID=1000（**定稿**，防重放，须 ≠999）、CoinSymbol="ycc"、[crypto.sub.secp256k1eth] evmChainID=4000（**定稿**）
 - [consensus] name="ticket"、minerExecs=["ticket"]（内嵌 ycc.go 已改）
 - [consensus.sub.ticket]：genesisBlockTime=迁移时刻、无 genesis 票（状态预载）
-- [mver.consensus.ticket]：coinReward=43、coinDevFund=26（bty 5:3；总增发 69 ycc/块 ≈ 旧链 13.8 ycc/s，推导见 REWARD.md）、ticketPrice=100000、targetTimePerBlock=5（5 秒出块）、其余按设计（**2026-09-18 定稿**）
+- [mver.consensus.ticket]：coinReward=43、coinDevFund=26（bty 5:3；总增发 69 ycc/块 ≈ 旧链 13.8 ycc/s，推导见 `~/work/src/chain/ycc-project/new-ycc/REWARD.md`）、ticketPrice=100000、targetTimePerBlock=5（5 秒出块）、其余按设计（**2026-09-18 定稿**）
 - p2p：新网络（新 seeds/端口/频道，与旧链隔离）
 
 **节点启动顺序**：

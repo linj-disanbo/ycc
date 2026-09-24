@@ -262,7 +262,7 @@ ChainID = 1000（ycc.toml 可配，须 ≠999）   evmChainID = 4000
 | powLimitBits | 0x1e528e0c | 按真实票数 40,645 解析公式标定（初始窗口），之后难度自调整 |
 | coinReward | **43 ycc/块（定稿）** | 每块挖矿奖励（`miner.Reward = CoinReward + fee`，与共识校验一致）；进票的 ReturnAddress |
 | coinDevFund | **26 ycc/块（定稿）** | 每块发展基金（`ForkTicketFundAddrV1=-1` → 恒启用：由 `ExecIssueCoins` 增发到 fundKeyAddr）。**必须写整数**：TOML 中写成 `26.0` 会解析为 float64，`MGInt` 走 `parseInt` 只认 int64 → 静默变 0 |
-| 每块总增发 | **43 + 26 = 69 ycc / 5s = 13.8 ycc/s（≈4.35 亿/年）** | 与旧链 pos33（15 ycc/~1.09s = 13.8 ycc/s、4.34 亿/年）相近；43:26 ≈ bty 口径 **5:3**；推导见 `docs/migrate/REWARD.md` |
+| 每块总增发 | **43 + 26 = 69 ycc / 5s = 13.8 ycc/s（≈4.35 亿/年）** | 与旧链 pos33（15 ycc/~1.09s = 13.8 ycc/s、4.34 亿/年）相近；43:26 ≈ bty 口径 **5:3**；推导见 `~/work/src/chain/ycc-project/new-ycc/REWARD.md` |
 
 ### 7.3 配置合并机制说明
 chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defalut key" 报错）。共识切换、maxTxNumber、powLimitBits 等**必须写入内嵌 ycc.go**，随二进制发布（与 ycc 现有约定一致："这部分配置随代码发布，不能修改"）。
@@ -309,7 +309,8 @@ chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defal
 | 静态二进制 | `~/work/src/chain/ycc-project/ycc-testdata/static-binaries/`（8 个，linux-amd64 零依赖） |
 | 设计文档 | ycc 仓库 `docs/migrate/DESIGN.md` |
 | 操作手册 | ycc 仓库 `docs/migrate/RUNBOOK.md` |
-| 收益参数定稿推导 | ycc 仓库 `docs/migrate/REWARD.md` |
+| 收益参数定稿推导 | `~/work/src/chain/ycc-project/new-ycc/REWARD.md`（仓库外） |
+| 新链任务清单 | `~/work/src/chain/ycc-project/TODO-new-ycc.md`（仓库外） |
 | 真实链验证结果 | `~/work/src/chain/ycc-project/ycc-testdata/test-result4/`（report/summary/state.bin/local.bin/new-ycc datadir） |
 | 索引 | ycc 仓库 `docs/migrate/00-INDEX.md` |
 | 本汇报 | ycc 仓库 `docs/migrate/REPORT.md` |

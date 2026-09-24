@@ -25,7 +25,7 @@
 |---|---|---|
 | `~/work/src/chain/ycc-project/ycc/`（分支 `new-ycc`） | **ycc 新链仓库** | 新链代码 + 工具 + 文档，改动已提交（见 §2 提交列表） |
 | └ `migrate/` | 8 个迁移工具源码 + `lib.go` + `build.sh` | export/transform/build/verify/calib/gendump/pos33stat/ticketdist；随 ycc 模块编译 |
-| └ `docs/migrate/` | 本套文档 | 00-INDEX / DESIGN / REPORT / RUNBOOK / REWARD（收益参数定稿推导） |
+| └ `docs/migrate/` | 本套文档 | 00-INDEX / DESIGN / REPORT / RUNBOOK（收益参数推导见仓库外 `new-ycc/REWARD.md`） |
 | └ `plugin/consensus/ticket/ticket.go` | ticket 共识 fork 版 | createMinerTx 用 `EncodeSignID(SECP256K1, eth.ID)`（eth 地址签名修复） |
 | └ `ycc.go` / `ycc.toml` | 内嵌配置 + 运行配置 | 共识/难度/maxTxNumber/收益参数内嵌；ChainID 在 ycc.toml |
 | `~/work/src/chain/ycc-project/ycc-testdata/static-binaries/` | 8 个**静态链接**可执行文件 | 服务器上直接运行，无依赖（linux-amd64）：build/calib/export/gendump/pos33stat/**ticketdist**/transform/verify |
@@ -33,7 +33,9 @@
 | `…/ycc-testdata/test-result{,2,3}/` | 真实链第 1/2/3 次转换（旧版） | 只有 report.txt + summary.json，供对照，勿用于部署 |
 | `…/ycc-testdata/04-…txt` `05-…json` `06-…json` | 测试报告工件 | 合成数据转换报告 / summary / 压力测试 |
 | `~/work/src/chain/ycc-project/old-ycc/` | 旧链接口参考资料 | GetPos33ConsigneeEntrust 查询样例、ycc-to-assetchain |
+| `~/work/src/chain/ycc-project/new-ycc/REWARD.md` | 收益参数定稿推导 | 旧链 13.8 ycc/s → 新链 69 ycc/5s → bty 5:3 取整 43:26 |
 | `~/work/src/chain/ycc-project/SESSION-SUMMARY.md` | 会话交接总结 | 项目目标/已完成/待办/关键路径 |
+| `~/work/src/chain/ycc-project/TODO-new-ycc.md` | 新链任务清单 | 去 ticket fork（等 bityuan 新版）等 |
 
 > **原 `33cn/plugin/ycc-migrate/` 已删除**，其内容去向：
 > - `01-ycc-code-changes.patch` → 已应用到 ycc 仓库并提交（**不再单独保留**；需要时可 `git diff 25310e5..` 重新生成）；
@@ -105,7 +107,7 @@ new-ycc/kvmvcc/store.db（版本0 状态预载）  new-ycc/blockchain.db（LODB 
 
 ## 7. 后续待办
 
-1. ~~**参数定稿**：chainID/evmChainID/收益参数~~ ✅ 2026-09-18 定稿：chainID=1000、evmChainID=4000、coinReward=43、coinDevFund=26（5:3，总增发 69 ycc/块 ≈ 旧链 13.8 ycc/s，推导见 `docs/migrate/REWARD.md`）
+1. ~~**参数定稿**：chainID/evmChainID/收益参数~~ ✅ 2026-09-18 定稿：chainID=1000、evmChainID=4000、coinReward=43、coinDevFund=26（5:3，总增发 69 ycc/块 ≈ 旧链 13.8 ycc/s，推导见 `~/work/src/chain/ycc-project/new-ycc/REWARD.md`）
 2. **双节点新链同步验证**（真实状态）：两节点同 preload datadir 起链，确认同步
 3. **正式迁移**：按 RUNBOOK 阶段四/五执行（用**最新 datadir**重新 export→transform→verify→calib→build→部署）
 4. **2 张脏数据票**：上线后委托人 0x485703fc 等用 ticket close 取回（共 70 万 ycc）

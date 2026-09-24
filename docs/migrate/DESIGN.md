@@ -1,7 +1,7 @@
 # ycc 链"减少存储重跑"迁移设计（pos33 → ticket，5s 出块，状态保留）
 
 > 2026-08-24 定稿并本地端到端验证通过（go1.18 构建，单节点 ticket 链实测 5s 出块、奖励发放、票状态流转）。2026-09-18 参数定稿。
-> 用户明确约束：票面价沿用 ycc（ticketPrice=100000，即 **10 万 ycc/张**）；收益参数按实际评估（**已定稿：coinReward=43 / coinDevFund=26，bty 5:3，总增发与旧链相近，见 REWARD.md**）；**ycc 总量不变**（不增发不销毁）；chainID 必须变更防重放（**已定稿 1000**）。
+> 用户明确约束：票面价沿用 ycc（ticketPrice=100000，即 **10 万 ycc/张**）；收益参数按实际评估（**已定稿：coinReward=43 / coinDevFund=26，bty 5:3，总增发与旧链相近，见 `~/work/src/chain/ycc-project/new-ycc/REWARD.md`**）；**ycc 总量不变**（不增发不销毁）；chainID 必须变更防重放（**已定稿 1000**）。
 
 ## 1. 现状
 
@@ -96,7 +96,7 @@ build   -datadir <新datadir> -state out/state.bin -local out/local.bin
   ticketFrozenTime=5  ticketWithdrawTime=10  ticketMinerWaitTime=2
   targetTimespan=2304  targetTimePerBlock=5  retargetAdjustmentFactor=4
 ```
-> **2026-09-18 参数定稿**（推导见 REWARD.md）：每块增发 = coinReward 43（挖矿奖励，进票的 ReturnAddress）+ coinDevFund 26（发展基金，`ForkTicketFundAddrV1=-1` 恒启用 → ExecIssueCoins 增发给 fundKeyAddr）= **69 ycc/5s ≈ 13.8 ycc/s**，与旧链 pos33（15 ycc/~1.09s ≈ 13.8 ycc/s、4.34 亿/年）相近；比例 43:26 ≈ bty 口径 **5:3**。ticketPrice=100000（10 万 ycc/张，与 pos33 `ticketPrice2` 一致）。
+> **2026-09-18 参数定稿**（推导见 `~/work/src/chain/ycc-project/new-ycc/REWARD.md`）：每块增发 = coinReward 43（挖矿奖励，进票的 ReturnAddress）+ coinDevFund 26（发展基金，`ForkTicketFundAddrV1=-1` 恒启用 → ExecIssueCoins 增发给 fundKeyAddr）= **69 ycc/5s ≈ 13.8 ycc/s**，与旧链 pos33（15 ycc/~1.09s ≈ 13.8 ycc/s、4.34 亿/年）相近；比例 43:26 ≈ bty 口径 **5:3**。ticketPrice=100000（10 万 ycc/张，与 pos33 `ticketPrice2` 一致）。
 > 注意两个参数必须为**整数**：TOML 写 `43.0` 会被解析成 float64，`MGInt`/`parseInt` 只认 int64 → 静默取 0（实测 `coinDevFund=100.0` 解析为 0）。
 
 ### 5.3 powLimitBits 校准（重要，解析公式，已实测验证）
