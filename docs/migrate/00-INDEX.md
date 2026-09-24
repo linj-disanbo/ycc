@@ -12,7 +12,7 @@
         │                                          │                              │
         │ migrate/（工具源码）                      │ static-binaries/（8 个）      │ dump.gob（旧链状态导出）
         │ docs/migrate/（本套文档）                 │ test-result4/（最终验证结果）  │ out4/（转换结果）
-        │ plugin/consensus/ticket/（fork 共识）      │ 04/05/06-*（报告工件）        │ new-ycc/（新链 datadir）
+        │ plugin/consensus/init/（注册上游 ticket）  │ 04/05/06-*（报告工件）        │ new-ycc/（新链 datadir）
         ▼                                          ▼                              ▼
    [构建：go1.18 + GOMODCACHE=/tmp/gomodcache]
         ▼
@@ -35,14 +35,14 @@
 | `~/work/src/chain/ycc-project/old-ycc/` | 旧链接口参考资料 | GetPos33ConsigneeEntrust 查询样例、ycc-to-assetchain |
 | `~/work/src/chain/ycc-project/new-ycc/REWARD.md` | 收益参数定稿推导 | 旧链 13.8 ycc/s → 新链 69 ycc/5s → bty 5:3 取整 43:26 |
 | `~/work/src/chain/ycc-project/SESSION-SUMMARY.md` | 会话交接总结 | 项目目标/已完成/待办/关键路径 |
-| `~/work/src/chain/ycc-project/TODO-new-ycc.md` | 新链任务清单 | 去 ticket fork（等 bityuan 新版）等 |
+| `~/work/src/chain/ycc-project/TODO-new-ycc.md` | 新链任务清单 | 依赖升级/去 ticket fork 记录等 |
 
 > **原 `33cn/plugin/ycc-migrate/` 已删除**，其内容去向：
 > - `01-ycc-code-changes.patch` → 已应用到 ycc 仓库并提交（**不再单独保留**；需要时可 `git diff 25310e5..` 重新生成）；
 > - `02-migrate-tools/` → ycc 仓库 `migrate/`；
 > - `static-binaries/`、`test-result*/`、`04/05/06-*` → `ycc-testdata/`；
 > - `DESIGN.md` / `RUNBOOK.md` / `REPORT.md` → ycc 仓库 `docs/migrate/`；
-> - `03-new-chain-config-sample.toml`、`ticket-fork-ticket.go` → 已并入 ycc.go / `plugin/consensus/ticket/ticket.go`，不再单独保留。
+> - `03-new-chain-config-sample.toml`、`ticket-fork-ticket.go` → 曾并入 ycc.go / `plugin/consensus/ticket/ticket.go`；**该本地 fork 已于 2026-09-24 删除**（依赖升级到上游已修复版本后不再需要，见下）。
 
 ## 2. 代码改动落点（ycc 仓库）
 
@@ -50,13 +50,15 @@
 
 | 文件 | 改动 |
 |---|---|
-| `ycc.go` | 内嵌配置：consensus=ticket、minerExecs=["ticket"]、[consensus.sub.ticket]、[mver.consensus.ticket]、[fork.sub.ticket]、maxTxNumber=30000、powLimitBits=0x1e528e0c、coinReward=43、coinDevFund=26、ticketPrice=100000、targetTimePerBlock=5、evmChainID=4000 |
-| `ycc.toml` | ChainID=1000 |
-| `plugin/consensus/init/init.go` | 注册 ycc fork 的 ticket 共识 |
+| `go.mod` / `go.sum` | **2026-09-24 依赖升级**：chain33 v1.72.2、plugin v1.74.0（`go 1.22`、Go 工具链 ≥1.19）；`replace avalanchego => 33cn/avalanchego`；gnet 固定 v1.4.3 |
+| `ycc.go` | 内嵌配置：consensus=ticket、minerExecs=["ticket"]、[consensus.sub.ticket]、[mver.consensus.ticket]、[fork.sub.ticket]、maxTxNumber=30000、powLimitBits=0x1e528e0c、coinReward=43、coinDevFund=26、ticketPrice=100000、targetTimePerBlock=5、evmChainID=4000；**新 chain33 新增 fork 键须显式声明**（ForkEthAddressFormat/ForkProxyExec/ForkMaxTxFeeV1/ForkParaFee/ForkAccountBlacklist(V2)/ForkTxChainIDStrict、evm ForkEvmExecNonceV2/ForkEVMFixOverflow） |
+| `ycc.toml` | ChainID=1000；**删除 `[mver.consensus] maxTxNumber`**（与内嵌配置同键会 panic: rewrite defalut key） |
+| `plugin/consensus/init/init.go` | 注册**上游** `github.com/33cn/plugin/plugin/consensus/ticket`（原本地 fork 已删） |
 | `plugin/dapp/init/init.go` | 注册 ticket 执行器（33cn/plugin 原版） |
-| `plugin/consensus/ticket/ticket.go`（新增） | fork 版 ticket 共识：createMinerTx 用 `EncodeSignID(SECP256K1, eth.ID)`（eth 地址签名修复） |
-| `migrate/`（新增目录） | 迁移工具源码（export/transform/build/verify/calib/gendump/pos33stat/ticketdist + build.sh） |
-| `go.mod` | 新增 goleveldb 依赖（工具用） |
+| `plugin/consensus/pos33/{sortition,gossip2}.go` | 适配新依赖：btcec v1→`btcec/v2`、libp2p v0.15→v0.30（core 路径 + mdns/routing discovery API） |
+| `plugin/dapp/pos33/wallet/ticket.go` | `SendTransaction` 新增 addressID 参数（传 ethID） |
+| `tokenTest/`、`plugin/consensus/pos33/t2/` | 适配 chain33 新 API（crypto.New→crypto.Load、types.Coin→DefaultCoinPrecision） |
+| `migrate/` | 迁移工具源码（export/transform/build/verify/calib/gendump/pos33stat/ticketdist + build.sh） |
 
 提交（`git log --oneline`）：`7c3b751 引入 ticket` → `3687ce4 增加 migrate` → `d420144 add migrate build script` → `080bf54 add ycc migrate docs` → `376a656`/`903decb`（ignore bin）→ `89504e5 add ticketdist tool` → `954636c test chain id` → `cc25f1e add build ticketdist`
 

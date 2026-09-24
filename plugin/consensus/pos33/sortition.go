@@ -2,7 +2,6 @@ package pos33
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
@@ -12,7 +11,7 @@ import (
 	"github.com/33cn/chain33/common/difficulty"
 	vrf "github.com/33cn/chain33/common/vrf/secp256k1"
 	"github.com/33cn/chain33/types"
-	secp256k1 "github.com/btcsuite/btcd/btcec"
+	secp256k1 "github.com/btcsuite/btcd/btcec/v2"
 	"github.com/golang/protobuf/proto"
 	pt "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 )
@@ -30,8 +29,8 @@ const (
 // 2. 那么从N个选票中抽出M个选票，等价于计算N次Hash, 并且Hash/max < M/N
 
 func calcuVrfHash(input proto.Message, priv crypto.PrivKey) ([]byte, []byte) {
-	privKey, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), priv.Bytes())
-	vrfPriv := &vrf.PrivateKey{PrivateKey: (*ecdsa.PrivateKey)(privKey)}
+	privKey, _ := secp256k1.PrivKeyFromBytes(priv.Bytes())
+	vrfPriv := &vrf.PrivateKey{PrivateKey: privKey.ToECDSA()}
 	in := types.Encode(input)
 	vrfHash, vrfProof := vrfPriv.Evaluate(in)
 	return vrfHash[:], vrfProof
@@ -122,12 +121,12 @@ func (n *node) committeeSort(seed []byte, height int64, round, ty int) []*pt.Pos
 }
 
 func vrfVerify(pub []byte, input []byte, proof []byte, hash []byte) error {
-	pubKey, err := secp256k1.ParsePubKey(pub, secp256k1.S256())
+	pubKey, err := secp256k1.ParsePubKey(pub)
 	if err != nil {
 		plog.Error("vrfVerify", "err", err)
 		return pt.ErrVrfVerify
 	}
-	vrfPub := &vrf.PublicKey{PublicKey: (*ecdsa.PublicKey)(pubKey)}
+	vrfPub := &vrf.PublicKey{PublicKey: pubKey.ToECDSA()}
 	vrfHash, err := vrfPub.ProofToHash(input, proof)
 	if err != nil {
 		plog.Error("vrfVerify", "err", err)

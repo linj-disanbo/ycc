@@ -101,7 +101,7 @@ new-ycc/kvmvcc/store.db（状态版本0 预载） + new-ycc/blockchain.db（LODB
 - 新链创世块**无交易**：空变更集 → kvmvcc 自动注册"版本 0"（stateHash = 空变更集哈希，`0xdd0ad3…`）。
 - 预载的版本 0 数据 = 创世状态（全部余额/票/dapp 状态）。
 - ticket 共识从高度 1 正常出块，执行器按正常路径读写状态。
-- 全程**不需要修改 chain33 框架**；仅 fork ycc 的 ticket 共识（1 处签名适配，见 §5.1）。
+- 全程**不需要修改 chain33 框架**；ticket 共识使用上游 plugin（v1.74.0 已适配 eth 地址签名，无需本地 fork，见 §5.1）。
 
 ### 3.3 转换原则：总量守恒
 迁移只"搬运"币，不增发、不销毁：
@@ -187,7 +187,8 @@ P(成功) = Σ_{b<e} P(哈希字节长 b) + P(b=e) × clamp((mantissa−2^16)/(2
 ### 5.1 ticket 共识 eth 地址签名（合成阶段）
 - 现象：ticket 挖矿块执行报 `ErrNoBalance`。
 - 根因：ticket 共识 `createMinerTx` 用 `tx.Sign(SECP256K1, priv)`，其 `tx.From()` 按签名类型映射为 **base58 地址**；ycc 链是 eth 地址账户体系，该地址余额为 0 → 矿工交易失败。
-- 修复：fork ticket 共识，签名改为 `tx.Sign(EncodeSignID(SECP256K1, eth.ID))`（与 pos33 一致）。**需 fork 的原因**：ticket 共识原版面向 base58 链（bityuan），ycc 需适配。
+- 修复：签名改为 `tx.Sign(EncodeSignID(SECP256K1, eth.ID))`（与 pos33 一致）。**为何当时要 fork**：ticket 共识原版面向 base58 链（bityuan），ycc 是 eth 账户体系。
+- **后续（2026-09-24）**：上游 commit `c7fe67d14`（2023-09-20）已在 plugin 内做了同样适配并通用化（按票 ID 前缀 `IsHex` 选 addressID，`getPrivMap` 同步适配），自 **plugin v1.69.0** 起可用；ycc 升级到 chain33 v1.72.2 + plugin v1.74.0 后**已删除本地 fork**。
 
 ### 5.2 maxTxNumber 缺失（合成阶段）
 - 现象：同步节点收到区块报 `ErrManyTx`。
@@ -304,7 +305,7 @@ chain33 的配置合并**不允许经 toml 覆盖内嵌标量**（"rewrite defal
 
 | 交付物 | 位置 |
 |---|---|
-| 新链代码（ticket fork + 内嵌配置） | `~/work/src/chain/ycc-project/ycc/`（分支 `new-ycc`；补丁已应用并提交：7c3b751/3687ce4） |
+| 新链代码（上游 ticket + 内嵌配置） | `~/work/src/chain/ycc-project/ycc/`（分支 `new-ycc`；依赖 chain33 v1.72.2 + plugin v1.74.0） |
 | 工具源码 | ycc 仓库 `migrate/`（export/transform/build/verify/calib/gendump/pos33stat/ticketdist + build.sh） |
 | 静态二进制 | `~/work/src/chain/ycc-project/ycc-testdata/static-binaries/`（8 个，linux-amd64 零依赖） |
 | 设计文档 | ycc 仓库 `docs/migrate/DESIGN.md` |

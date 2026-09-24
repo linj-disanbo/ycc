@@ -271,7 +271,7 @@ func (policy *ticketPolicy) migrate(priv crypto.PrivKey) ([]byte, error) {
 	}
 	act.Ty = ty.Pos33ActionMigrate
 	bizlog.Info("pos33 migrate", "miner", addr)
-	return policy.walletOperate.SendTransaction(act, []byte(ty.Pos33TicketX), priv, "")
+	return policy.walletOperate.SendTransaction(act, []byte(ty.Pos33TicketX), priv, ethID, "")
 }
 
 func (policy *ticketPolicy) blsBind(priv crypto.PrivKey) ([]byte, error) {

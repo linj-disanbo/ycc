@@ -97,9 +97,9 @@ func main() {
 	}
 }
 
-//HexToPrivkey ： convert hex string to private key
+// HexToPrivkey ： convert hex string to private key
 func HexToPrivkey(key string) crypto.PrivKey {
-	cr, err := crypto.New(secp256k1.Name)
+	cr, err := crypto.Load(secp256k1.Name, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func newPreTx(symbol, owner string) (string, error) {
 		Symbol:   symbol,
 		Price:    100,
 		Category: 1,
-		Total:    10000 * types.Coin,
+		Total:    10000 * types.DefaultCoinPrecision,
 		Owner:    owner,
 	}
 	var txhex string

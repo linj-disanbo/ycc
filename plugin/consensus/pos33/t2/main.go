@@ -28,6 +28,7 @@ import (
 	"github.com/33cn/chain33/common/log/log15"
 	rpctypes "github.com/33cn/chain33/rpc/types"
 	"github.com/33cn/chain33/system/crypto/none"
+	_ "github.com/33cn/chain33/system/crypto/secp256k1" // 注册 secp256k1 驱动（crypto.Load 依赖）
 	"github.com/33cn/chain33/types"
 	ty "github.com/33cn/plugin/plugin/dapp/valnode/types"
 	"google.golang.org/grpc"
@@ -519,7 +520,7 @@ type RespMsg struct {
 }
 
 func getprivkey(key string) crypto.PrivKey {
-	cr, err := crypto.New(types.GetSignName("", types.SECP256K1))
+	cr, err := crypto.Load(types.GetSignName("", types.SECP256K1), 0)
 	if err != nil {
 		panic(err)
 	}
@@ -535,7 +536,7 @@ func getprivkey(key string) crypto.PrivKey {
 }
 
 func genaddress() (string, crypto.PrivKey) {
-	cr, err := crypto.New(types.GetSignName("", types.SECP256K1))
+	cr, err := crypto.Load(types.GetSignName("", types.SECP256K1), 0)
 	if err != nil {
 		panic(err)
 	}
@@ -544,8 +545,8 @@ func genaddress() (string, crypto.PrivKey) {
 		panic(err)
 	}
 	addrto := address.PubKeyToAddr(ethID, privto.PubKey().Bytes())
-	fmt.Println("addr:", addrto.String())
-	return addrto.String(), privto
+	fmt.Println("addr:", addrto)
+	return addrto, privto
 }
 
 // RandStringBytes ...

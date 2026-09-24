@@ -14,7 +14,7 @@
 
 1. **全量状态保留**：导出 kvmvcc 最新版本 → pos33→ticket 转换 → 写入新链 datadir（store 版本0 预载 + blockchain.db 的 LODB 本地键）→ 新链创世状态即迁移状态。
 2. **共识 5s**：ticket 共识 `[mver.consensus.ticket] targetTimePerBlock=5`（难度自调整收敛到 5s）+ 初始 powLimitBits 按票数校准（见 §5.3）。
-3. **pos33 → ticket**：ticket 共识/执行器（plugin v1.68.4 自带；共识 fork 到 ycc 修复 eth 签名，见 §4.3）。
+3. **pos33 → ticket**：ticket 共识/执行器直接用**上游** plugin（v1.74.0 自带；该版本已适配 eth 地址签名，**无需本地 fork**，见 §4.3）。
 4. **chainID 变更**（§5.1）：旧交易执行时 `tx.ChainID != cfg.GetChainID()` 被拒 → 防重放。
 
 ### 2.1 机制要点（零框架改动）
@@ -73,10 +73,11 @@ build   -datadir <新datadir> -state out/state.bin -local out/local.bin
 
 > 该补丁文件已不单独保留（交付物已迁入 ycc 仓库）；需要差分时 `git diff 25310e5..new-ycc`。
 
-1. `plugin/consensus/init/init.go`：注册 ticket 共识（ycc fork 版）。
+1. `plugin/consensus/init/init.go`：注册上游 ticket 共识（`github.com/33cn/plugin/plugin/consensus/ticket`）。
 2. `plugin/dapp/init/init.go`：注册 ticket 执行器（33cn/plugin 原版即可）。
-3. **`plugin/consensus/ticket/ticket.go`（新增 fork）**：`createMinerTx` 签名改为 `types.EncodeSignID(types.SECP256K1, eth.ID)`——原版 `tx.Sign(types.SECP256K1, priv)` 的 tx.From() 是 base58 地址（ExtractAddressID 按签名类型映射），在 eth 账户体系下余额为 0 → 挖矿块执行 ErrNoBalance（实测根因，pos33 原实现即 EncodeSignID 编码 ethID）。
-4. `ycc.go`（内嵌配置）：consensus name="ticket"、minerExecs=["ticket"]、`[consensus.sub.ticket]`、`[mver.consensus.ticket]`、`[fork.sub.ticket]`、powLimitBits 校准（§5.3）。
+3. **（已废弃）~~`plugin/consensus/ticket/ticket.go`（新增 fork）~~**：早期 plugin v1.68.4 的 `createMinerTx` 用 `tx.Sign(types.SECP256K1, priv)`，其 `tx.From()` 是 base58 地址（`ExtractAddressID(ty)==0`）→ eth 账户体系下余额为 0 → 挖矿块执行 `ErrNoBalance`（实测根因）。当时本地 fork 了 ticket 改成 `EncodeSignID(types.SECP256K1, eth.ID)`。
+   - **2026-09-24 已删除该 fork**：上游 commit `c7fe67d14`（2023-09-20）已修复，自 **plugin v1.69.0** 起包含——`addMinerTx` 按票 ID 前缀 `common.IsHex` 选 addressID（hex→eth.ID，否则默认），`createMinerTx(..., addressID)` 用 `EncodeSignID(SECP256K1, addressID)` 签名，并顺带把 `getPrivMap` 也按地址前缀通用化。ycc 依赖已升级到 **chain33 v1.72.2 + plugin v1.74.0**。
+4. `ycc.go`（内嵌配置）：consensus name="ticket"、minerExecs=["ticket"]、`[consensus.sub.ticket]`、`[mver.consensus.ticket]`、`[fork.sub.ticket]`、powLimitBits 校准（§5.3）；**chain33 v1.72.0 起新增的 fork 键必须在配置中显式声明**（否则启动 panic），取值见 `00-INDEX.md §2`。
    > 配置合并机制限制：内嵌 yccconfig 的标量不能经 ycc.toml 覆盖（checkConfig 报 "rewrite defalut key"）→ 共识切换/链参数必须改内嵌配置随代码发布（与 ycc 现有约定一致："这部分配置随代码发布，不能修改"）。
 
 ## 5. 新链配置

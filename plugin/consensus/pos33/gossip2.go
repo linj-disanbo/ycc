@@ -14,19 +14,17 @@ import (
 	pt "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 
 	"github.com/libp2p/go-libp2p"
-	autonat "github.com/libp2p/go-libp2p-autonat"
-	circuit "github.com/libp2p/go-libp2p-circuit"
-	"github.com/libp2p/go-libp2p-core/crypto"
-	"github.com/libp2p/go-libp2p-core/host"
-	"github.com/libp2p/go-libp2p-core/network"
-	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/libp2p/go-libp2p-core/peerstore"
-	protocol "github.com/libp2p/go-libp2p-core/protocol"
-	routing "github.com/libp2p/go-libp2p-core/routing"
-	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/routing"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	routingdisc "github.com/libp2p/go-libp2p/p2p/discovery/routing"
 
 	"github.com/multiformats/go-multiaddr"
 )
@@ -301,20 +299,20 @@ func (g *gossip2) handleOutgoing() {
 
 func newHost(ctx context.Context, priv crypto.PrivKey, port int, ns string) host.Host {
 	var idht *dht.IpfsDHT
-	h, err := libp2p.New(ctx,
+	h, err := libp2p.New(
 		libp2p.Identity(priv),
 		libp2p.ListenAddrStrings(
 			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port), // regular tcp connections
 		),
 		libp2p.EnableNATService(),
-		libp2p.DefaultTransports,
 		libp2p.NATPortMap(),
 		libp2p.Routing(func(h host.Host) (routing.PeerRouting, error) {
 			dht, err := dht.New(ctx, h)
 			idht = dht
 			return idht, err
 		}),
-		libp2p.EnableRelay(circuit.OptHop),
+		libp2p.EnableRelay(),
+		libp2p.EnableRelayService(),
 	)
 
 	if err != nil {
@@ -370,24 +368,19 @@ func printPeerstore(h host.Host) {
 }
 
 func discover(ctx context.Context, h host.Host, idht *dht.IpfsDHT, ns string) {
-	_, err := autonat.New(ctx, h)
-	if err != nil {
-		panic(err)
-	}
-	mdns := mdns.NewMdnsService(h, ns)
-	if err != nil {
-		panic(err)
-	}
-
 	mn := &mdnsNotifee{h: h, ctx: ctx}
-	mdns.RegisterNotifee(mn)
+	mdnsService := mdns.NewMdnsService(h, ns, mn)
+	if err := mdnsService.Start(); err != nil {
+		plog.Error("mdns start error", "err", err)
+	}
 
-	err = idht.Bootstrap(ctx)
-	if err != nil {
+	if err := idht.Bootstrap(ctx); err != nil {
 		panic(err)
 	}
-	routingDiscovery := discovery.NewRoutingDiscovery(idht)
-	discovery.Advertise(ctx, routingDiscovery, ns)
+	routingDiscovery := routingdisc.NewRoutingDiscovery(idht)
+	if _, err := routingDiscovery.Advertise(ctx, ns); err != nil {
+		plog.Error("discovery advertise error", "err", err)
+	}
 
 	peerChan, err := routingDiscovery.FindPeers(ctx, ns)
 	if err != nil {

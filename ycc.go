@@ -136,6 +136,14 @@ targetTimespan = 2304
 targetTimePerBlock = 5
 retargetAdjustmentFactor = 4
 
+# 账户黑名单：ForkAccountBlacklist/V2 在 [fork.system] 中开启（=0）时，
+# 对应的 [mver.blacklist.<fork>] 段必须存在，否则启动 panic；ycc 无存量名单，配空列表
+[mver.blacklist.ForkAccountBlacklist]
+accountBlacklist=[]
+
+[mver.blacklist.ForkAccountBlacklistV2]
+accountBlacklist=[]
+
 [store]
 dbCache = 256
 driver = "leveldb"
@@ -313,6 +321,15 @@ ForkRootHash=0
 #eth address key format fork
 ForkFormatAddressKey=0
 ForkCheckEthTxSort=36000000
+#chain33 v1.72.0 起要求以下 fork 必须在配置中显式声明（缺失会 panic: system fork X not config）
+#取值规则：bityuan 6.9.1 已开启的 → ycc 新链从高度 0 开启；bityuan 未开启的 → -1 关闭
+ForkEthAddressFormat=0
+ForkProxyExec=0
+ForkMaxTxFeeV1=0
+ForkParaFee=-1
+ForkAccountBlacklist=0
+ForkAccountBlacklistV2=0
+ForkTxChainIDStrict=0
 
 [fork.sub.coins]
 Enable=0
@@ -405,6 +422,9 @@ ForkEVMMixAddress=0
 ForkEVMAddressInit=0
 ForkIntrinsicGas=0
 ForkEvmExecNonce=0
+#chain33 v1.72.0/plugin v1.74.0 新增，必须显式声明（默认 0 = 从高度 0 生效）
+ForkEvmExecNonceV2=0
+ForkEVMFixOverflow=0
 
 [fork.sub.unfreeze]
 Enable=0

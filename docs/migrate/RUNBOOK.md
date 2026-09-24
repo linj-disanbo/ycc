@@ -8,7 +8,7 @@
 - 需要：一台可访问**已同步旧节点 datadir** 的服务器（导出）、N 台新链节点服务器。
 - 旧链信息（已确认）：chainID=999、CoinSymbol="ycc"、Title="pos33"、共识 pos33、存储 kvmvcc（datadir/kvmvcc/store.db）。
 - 工具：`migrate/`（export/transform/verify/build/calib/pos33stat/ticketdist/gendump），go1.18 构建（`CGO_ENABLED=0 GOROOT=<go1.18> GOMODCACHE=<cache> GOCACHE=<cache> go build -o bin/ ./migrate/...`）或直接用 `ycc-testdata/static-binaries/` 里的静态二进制。
-- 新链代码：ycc 仓库 `new-ycc` 分支（ticket fork + eth 签名修复 + 内嵌配置，原 `01-ycc-code-changes.patch` 已应用并提交）。
+- 新链代码：ycc 仓库 `new-ycc` 分支（依赖 chain33 v1.72.2 + plugin v1.74.0，ticket 用上游实现、无本地 fork；内嵌配置见 ycc.go）。
 
 ## 1. 阶段一：状态导出（在旧节点服务器）
 

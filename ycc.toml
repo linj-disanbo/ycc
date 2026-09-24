@@ -75,8 +75,8 @@ bootPeers = [
 issueTotal = 10000000000
 listenPort = 10801
 
-[mver.consensus]
-maxTxNumber = 30000
+# 注意：maxTxNumber 等 [mver.consensus] 键已内嵌在 ycc.go，不能在此重复声明
+# （chain33 配置合并会因同键重复而 panic: rewrite defalut key）
 
 [store]
 dbPath = "datadir/kvmvcc"
