@@ -10,7 +10,7 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_ROOT"
 
 OUT="${1:-bin}"
-TOOLS="export transform build verify calib gendump pos33stat ticketdist"
+TOOLS="export transform build verify calib gendump pos33stat ticketdist txscan"
 
 GO="${YCC_GO:-/home/linj/pkg/go/bin/go}"
 if [ ! -x "$GO" ]; then
