@@ -343,7 +343,9 @@ Enable=0
 ForkFriendExecer=0
 
 [fork.sub.pos33]
-Enable=0
+# -1 = 停用 pos33 执行器（driver 激活高度=MaxHeight → LoadDriver 失败 → 交易在 checkTx 处
+# 以 ErrExecNameNotAllow 被拒）。pos33 已在迁移中被 ticket 取代，交易重放依赖此停用 + txhash 索引。
+Enable=-1
 ForkReward15=0 
 ForkFixReward=0
 UseEntrust=0

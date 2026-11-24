@@ -13,6 +13,9 @@
 //	willIndex=true            → 期望拒绝（ErrTxDup）
 //	其它                       → 仅记录，不判定
 //
+// 注意：Chain33.SendTransaction 的 jrpc 参数是 {"data": "<hex>"}（rpctypes.RawParm 的 json tag 是 data，
+// 不是 tx）；用 "tx" 会被当成空串，解出零值交易并一律返回 ErrTxChainID。
+//
 // 另外对 rlpForm 样本：rawHex 解出的 evm payload 里 Note 即原始 RLP 交易；若给 -eth-rpc，
 // 会再用该 RLP 走 eth_sendRawTransaction（模拟“重新组装提交”），期望被 nonce 拒。
 package main
@@ -118,7 +121,7 @@ func main() {
 			rows = append(rows, r)
 			continue
 		}
-		res, rpcErr := callRPC(*rpc, "Chain33.SendTransaction", []interface{}{map[string]string{"tx": s.RawHex}})
+		res, rpcErr := callRPC(*rpc, "Chain33.SendTransaction", []interface{}{map[string]string{"data": s.RawHex}})
 		switch {
 		case rpcErr != nil || isErrResult(res):
 			r.Actual = errText(res, rpcErr)
