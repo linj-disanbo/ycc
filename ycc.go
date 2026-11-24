@@ -179,7 +179,7 @@ tkCloseCacheLen = 200000
 [crypto]
 
 [crypto.sub.secp256k1eth]
-evmChainID=4000
+evmChainID=3999
 
 [wallet]
 dbCache = 16
@@ -330,6 +330,13 @@ ForkParaFee=-1
 ForkAccountBlacklist=0
 ForkAccountBlacklistV2=0
 ForkTxChainIDStrict=0
+# chain33 v1.73.0 新增 fork（同样必须显式声明，缺失会 panic: system fork X not config）
+# ForkEthSignEnvelope：启用后对 eth 签名（RLP）交易按当前高度重建 chain33 信封并逐字段比对，
+#   防止签名未覆盖的信封字段（execer/To/fee/payload/有效期等）被第三方改写；新链无历史，从 0 开启。
+# ForkGenesisOnlyAtHeightZero：框架在派发 Exec_Genesis 前统一拒绝 height!=0 的创世动作。
+#   新链创世交易只存在于高度 0，从 0 开启安全。
+ForkEthSignEnvelope=0
+ForkGenesisOnlyAtHeightZero=0
 
 [fork.sub.coins]
 Enable=0
@@ -343,6 +350,7 @@ UseEntrust=0
 
 [fork.sub.rollup]
 Enable=36000000
+ForkSecurityHardening=0
 
 [fork.sub.none]
 ForkUseTimeDelay=0
@@ -354,6 +362,9 @@ Enable=0
 Enable=0
 ForkTicketId = 0 
 ForkTicketVrf = 0
+# plugin v1.76.x 新增：关闭重复票、挖矿交易(tx[0])执行器必须为 ticket（均为安全加固，新链从 0 开启）
+ForkTicketCloseDup=0
+ForkMinerExecerCheck=0
 
 [fork.sub.retrieve]
 Enable=0
@@ -400,6 +411,7 @@ ForkParaRootHash=0
 ForkParaSupervision=0
 ForkParaAutonomySuperGroup = -1
 ForkParaFreeRegister = 0
+ForkParaTitleExecMatch=0
 ForkParaCheckTx=0
 
 [fork.sub.multisig]
@@ -424,6 +436,9 @@ ForkIntrinsicGas=0
 ForkEvmExecNonce=0
 #chain33 v1.72.0/plugin v1.74.0 新增，必须显式声明（默认 0 = 从高度 0 生效）
 ForkEvmExecNonceV2=0
+#plugin v1.76.x 新增（同样必须声明）：ForkEVMSuicidePayer 默认 0；ForkEVMTransferRevert 默认 MaxHeight→-1
+ForkEVMSuicidePayer=0
+ForkEVMTransferRevert=-1
 ForkEVMFixOverflow=0
 
 [fork.sub.unfreeze]

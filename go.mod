@@ -7,8 +7,8 @@ toolchain go1.22.12
 replace github.com/ava-labs/avalanchego => github.com/33cn/avalanchego v1.10.10-0.20240529041529-ada691598153
 
 require (
-	github.com/33cn/chain33 v1.72.2
-	github.com/33cn/plugin v1.74.0
+	github.com/33cn/chain33 v1.73.1
+	github.com/33cn/plugin v1.76.4
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/golang/protobuf v1.5.4
 	github.com/libp2p/go-libp2p v0.30.0

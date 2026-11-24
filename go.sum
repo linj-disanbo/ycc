@@ -48,8 +48,12 @@ dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
 github.com/33cn/chain33 v1.72.2 h1:N/dK7WDJShOKNAkRzktqncoltfBQh1igolVGxzxbjks=
 github.com/33cn/chain33 v1.72.2/go.mod h1:6C5lKl8ejjoXtyhetFXz13t+JV4UQvp9H4t9eLOTNXs=
+github.com/33cn/chain33 v1.73.1 h1:oabj/o+iflAPliF4oEotZH017lpmn9HldjwR3yw1PF8=
+github.com/33cn/chain33 v1.73.1/go.mod h1:6C5lKl8ejjoXtyhetFXz13t+JV4UQvp9H4t9eLOTNXs=
 github.com/33cn/plugin v1.74.0 h1:ZTv6l9nNp+72ljczw9xvCr2ZBp9KhV6BI3r9ytlx720=
 github.com/33cn/plugin v1.74.0/go.mod h1:sPz6iWMfTu8osvQmiZS2sE1NclIG7bpvlnItpA0wxOs=
+github.com/33cn/plugin v1.76.4 h1:wX2Aa21vtGrREFIKY0ENJ7u2/ioqg2Vw/kNxf6TeuIE=
+github.com/33cn/plugin v1.76.4/go.mod h1:nNpya6vUTvG6ELrtBdtBQQmmWBpoDo1i3qpY650h0cQ=
 github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 h1:cTp8I5+VIoKjsnZuH8vjyaysT/ses3EvZeaV/1UkF2M=
 github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96/go.mod h1:bOvUY6CB00SOBii9/FifXqc0awNKxLFCL/+pkDPuyl8=
 github.com/Azure/azure-sdk-for-go v41.3.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
