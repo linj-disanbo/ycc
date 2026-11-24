@@ -44,8 +44,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/33cn/chain33/system/crypto/secp256k1eth"
-	dtypes "github.com/33cn/chain33/system/dapp/coins/types"
 	"github.com/33cn/chain33/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
@@ -57,19 +55,6 @@ import (
 )
 
 const (
-	bodyPrefix     = "Body:" // 表结构引入前的旧布局
-	heightPrefix   = "Height:"
-	lastHeightKey  = "blockLastHeight"
-	txHashPrefix   = "TX:"
-	txShortPrefix  = "STX:"
-	evmNoncePrefix = "LODB-evm-noncestate:"
-	pos33Execer    = "pos33"
-	ethSignTy      = int32((2 << 12) | secp256k1eth.ID)
-
-	// 表布局（chain33 v1.68+）：CHAIN-body-body-d- + %012d(height) + hash
-	tableBodyDataPrefix = "CHAIN-body-body-d-"
-	tableBodyHashPrefix = "CHAIN-body-body-m-hash-"
-
 	// TxHeight 型 expire 的窗口分布分桶步长（按旧高度）
 	txHeightBucketStep = int64(6000000)
 	bucketNum          = 256
@@ -190,7 +175,7 @@ func main() {
 		return
 	}
 
-	last, err := loadLastHeight(db)
+	last, err := migrate.LoadLastHeight(db)
 	if err != nil {
 		log.Fatalf("读取链高度失败: %v", err)
 	}
@@ -243,7 +228,7 @@ func main() {
 
 	var rec [recSize]byte
 	for h := int64(1); h <= st.maxHeight; h++ {
-		txs, layout, err := loadBlockTxs(db, h)
+		txs, layout, err := migrate.LoadBlockTxs(db, h)
 		if err != nil {
 			st.missingBody++
 			if st.missingBody <= 20 {
@@ -264,7 +249,7 @@ func main() {
 			if tx.Signature != nil {
 				sigTy = tx.Signature.Ty
 			}
-			if isPos33Execer(execer) {
+			if migrate.IsPos33Execer(execer) {
 				st.pos33Total++
 				if *filterPos33 {
 					st.pos33Skipped++
@@ -298,8 +283,8 @@ func main() {
 			// 金额统计（coins / evm 两类可解；其它执行器按“不适用”计）
 			// dust 判定：**仅** execer=coins（含平行链 coins，按 realExec 归一）且 amount==1
 			// 非 coins 的 amount==1（如 evm 合约调用）不计入 dust、不会被跳过。
-			amount, kind := txAmount(tx)
-			if amount == 1 && isCoinsExecer(tx.Execer) {
+			amount, kind := migrate.TxAmount(tx)
+			if amount == 1 && migrate.IsCoinsExecer(tx.Execer) {
 				if *skipDust {
 					st.dustSkipped++
 					if tx.Expire > types.TxHeightFlag {
@@ -323,7 +308,7 @@ func main() {
 			if tx.Signature != nil {
 				from = strings.ToLower(tx.From())
 			}
-			if sigTy == ethSignTy && execer == "evm" && from != "" {
+			if sigTy == migrate.EthSignTy && execer == "evm" && from != "" {
 				st.ethTxByAddr[from]++
 			}
 
@@ -386,7 +371,7 @@ func main() {
 		sort.Slice(rows, func(i, j int) bool { return bytes.Compare(rows[i].h[:], rows[j].h[:]) < 0 })
 		for k := range rows {
 			r := &rows[k]
-			key := append([]byte(txHashPrefix), r.h[:]...)
+			key := append([]byte(migrate.TxHashPrefix), r.h[:]...)
 			val := encodeTxResult(r.height, r.index)
 			if err := migrate.WriteKVRecord(tee, key, val); err != nil {
 				log.Fatalf("写 %s 失败: %v", txFile, err)
@@ -397,7 +382,7 @@ func main() {
 			var short [8]byte
 			copy(short[:], r.h[:8])
 			if !haveShort || short != lastShort {
-				if err := migrate.WriteKVRecord(tee, append([]byte(txShortPrefix), short[:]...), []byte("1")); err != nil {
+				if err := migrate.WriteKVRecord(tee, append([]byte(migrate.TxShortPrefix), short[:]...), []byte("1")); err != nil {
 					log.Fatalf("写 %s 失败: %v", txFile, err)
 				}
 				lastShort = short
@@ -423,7 +408,7 @@ func main() {
 	// ---------- eth nonce ----------
 	evmKVs, err := loadEvmNonces(db)
 	if err != nil {
-		log.Fatalf("读取 %s* 失败: %v", evmNoncePrefix, err)
+		log.Fatalf("读取 %s* 失败: %v", migrate.EvmNoncePrefix, err)
 	}
 	evmFile := filepath.Join(*outDir, "evmnonce.bin")
 	evmHash, err := migrate.WriteKVFile(evmFile, evmKVs)
@@ -547,76 +532,12 @@ func readBucket(bs []*bucketFile, i int) ([]txRow, error) {
 
 // ---------- 读取旧 datadir ----------
 
-func loadLastHeight(db *leveldb.DB) (int64, error) {
-	b, err := db.Get([]byte(lastHeightKey), nil)
-	if err != nil {
-		return -1, fmt.Errorf("读 %s 失败: %w", lastHeightKey, err)
-	}
-	var h types.Int64
-	if err := types.Decode(b, &h); err == nil {
-		return h.Data, nil
-	}
-	var raw int64
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return -1, fmt.Errorf("解析链高度失败")
-	}
-	return raw, nil
-}
-
-// loadBlockTxs 读取某高度的交易列表，返回（交易列表，布局名，错误）。
-func loadBlockTxs(db *leveldb.DB, height int64) ([]*types.Transaction, string, error) {
-	hash, err := db.Get([]byte(heightPrefix+strconv.FormatInt(height, 10)), nil)
-	if err != nil {
-		return nil, "", fmt.Errorf("Height:%d 未找到", height)
-	}
-	if body, err := loadBodyTable(db, height, hash); err == nil {
-		return body.Txs, "table", nil
-	}
-	if bodyBytes, err := db.Get(append([]byte(bodyPrefix), hash...), nil); err == nil {
-		var body types.BlockBody
-		if err := types.Decode(bodyBytes, &body); err == nil {
-			return body.Txs, "legacy", nil
-		}
-	}
-	return nil, "", fmt.Errorf("block body 未命中 hash=%s", hex.EncodeToString(hash))
-}
-
-func loadBodyTable(db *leveldb.DB, height int64, hash []byte) (*types.BlockBody, error) {
-	primary := append([]byte(fmt.Sprintf("%012d", height)), hash...)
-	if v, err := db.Get(append([]byte(tableBodyDataPrefix), primary...), nil); err == nil {
-		return decodeTableRow(v)
-	}
-	ip := append([]byte(tableBodyHashPrefix), hash...)
-	ip = append(ip, '-')
-	it := db.NewIterator(util.BytesPrefix(ip), nil)
-	defer it.Release()
-	if it.Next() {
-		pk := append([]byte(nil), it.Value()...)
-		if v, err := db.Get(append([]byte(tableBodyDataPrefix), pk...), nil); err == nil {
-			return decodeTableRow(v)
-		}
-	}
-	return nil, fmt.Errorf("CHAIN-body 未命中")
-}
-
-// decodeTableRow 解析 table.Row.Encode()：[8B LE len(primary)] + primary + Encode(Data)
-func decodeTableRow(v []byte) (*types.BlockBody, error) {
-	if len(v) < 8 {
-		return nil, fmt.Errorf("row 太短")
-	}
-	n := int64(binary.LittleEndian.Uint64(v[:8]))
-	if n < 0 || int(n) > len(v)-8 {
-		return nil, fmt.Errorf("row primary 长度非法: %d", n)
-	}
-	var body types.BlockBody
-	if err := types.Decode(v[8+n:], &body); err != nil {
-		return nil, fmt.Errorf("解析 BlockBody 失败: %w", err)
-	}
-	return &body, nil
+func encodeTxResult(height int64, index int32) []byte {
+	return types.Encode(&types.TxResult{Height: height, Index: index})
 }
 
 func loadEvmNonces(db *leveldb.DB) ([]*types.KeyValue, error) {
-	it := db.NewIterator(util.BytesPrefix([]byte(evmNoncePrefix)), nil)
+	it := db.NewIterator(util.BytesPrefix([]byte(migrate.EvmNoncePrefix)), nil)
 	defer it.Release()
 	var kvs []*types.KeyValue
 	for it.Next() {
@@ -630,61 +551,10 @@ func loadEvmNonces(db *leveldb.DB) ([]*types.KeyValue, error) {
 	return kvs, nil
 }
 
-// ---------- 输出 ----------
-
-func encodeTxResult(height int64, index int32) []byte {
-	return types.Encode(&types.TxResult{Height: height, Index: index})
-}
-
-// txAmount 解析交易金额（最小单位）。仅覆盖可解的主要类型：
-//
-//	coins.Transfer / coins.TransferToExec / coins.Withdraw、evm（EVMContractAction4Chain33.Amount）
-//
-// 其它执行器返回 (0, "")，统计里只记为 amount==0，不参与 dust 判定。
-// isCoinsExecer 归一化后是否 coins 执行器（平行链 user.p.x.coins 也归一为 coins）。
-func isCoinsExecer(execer []byte) bool {
-	return string(types.GetRealExecName(execer)) == "coins"
-}
-
-func txAmount(tx *types.Transaction) (int64, string) {
-	real := string(types.GetRealExecName(tx.Execer))
-	switch real {
-	case "coins":
-		var act dtypes.CoinsAction
-		if err := types.Decode(tx.Payload, &act); err != nil {
-			break
-		}
-		switch v := act.Value.(type) {
-		case *dtypes.CoinsAction_Transfer:
-			if v.Transfer != nil {
-				return v.Transfer.Amount, "coins.transfer"
-			}
-		case *dtypes.CoinsAction_TransferToExec:
-			if v.TransferToExec != nil {
-				return v.TransferToExec.Amount, "coins.transferToExec"
-			}
-		case *dtypes.CoinsAction_Withdraw:
-			if v.Withdraw != nil {
-				return v.Withdraw.Amount, "coins.withdraw"
-			}
-		}
-	case "evm":
-		var act types.EVMContractAction4Chain33
-		if err := types.Decode(tx.Payload, &act); err == nil {
-			return int64(act.Amount), "evm"
-		}
-	}
-	return 0, ""
-}
-
-func isPos33Execer(execer string) bool {
-	return execer == pos33Execer || strings.HasSuffix(execer, "."+pos33Execer)
-}
-
 func crossCheckNonces(evmKVs []*types.KeyValue, ethTxByAddr map[string]int64) (string, int) {
 	expected := make(map[string]int64, len(evmKVs))
 	for _, kv := range evmKVs {
-		addr := strings.ToLower(strings.TrimPrefix(string(kv.Key), evmNoncePrefix))
+		addr := strings.ToLower(strings.TrimPrefix(string(kv.Key), migrate.EvmNoncePrefix))
 		var n types.EvmAccountNonce
 		if err := types.Decode(kv.Value, &n); err != nil {
 			continue
@@ -895,25 +765,25 @@ func truncate(b []byte, n int) []byte {
 }
 
 func probeHeightFn(db *leveldb.DB, height int64) {
-	hash, err := db.Get([]byte(heightPrefix+strconv.FormatInt(height, 10)), nil)
+	hash, err := db.Get([]byte(migrate.HeightPrefix+strconv.FormatInt(height, 10)), nil)
 	fmt.Printf("height=%d\n", height)
 	if err != nil {
 		fmt.Printf("  Height:<h>        : 未命中（%v）\n", err)
 		return
 	}
 	fmt.Printf("  Height:<h>        : %x\n", hash)
-	if v, err := db.Get(append([]byte(bodyPrefix), hash...), nil); err == nil {
+	if v, err := db.Get(append([]byte(migrate.BodyPrefixLegacy), hash...), nil); err == nil {
 		fmt.Printf("  Body:<hash>       : 命中，len=%d\n", len(v))
 	} else {
 		fmt.Printf("  Body:<hash>       : 未命中\n")
 	}
-	pk := append([]byte(tableBodyDataPrefix), append([]byte(fmt.Sprintf("%012d", height)), hash...)...)
+	pk := append([]byte(migrate.TableBodyDataPrefix), append([]byte(fmt.Sprintf("%012d", height)), hash...)...)
 	if v, err := db.Get(pk, nil); err == nil {
 		fmt.Printf("  CHAIN-body (012d) : 命中，len=%d\n", len(v))
 	} else {
 		fmt.Printf("  CHAIN-body (012d) : 未命中\n")
 	}
-	ip := append([]byte(tableBodyHashPrefix), hash...)
+	ip := append([]byte(migrate.TableBodyHashPrefix), hash...)
 	ip = append(ip, '-')
 	it := db.NewIterator(util.BytesPrefix(ip), nil)
 	defer it.Release()
