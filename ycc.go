@@ -241,6 +241,12 @@ superManager=[
 nodeGroupFrozenCoins=0
 #平行链共识停止后主链等待的高度
 paraConsensusStopBlocks=30000
+# 平行链资产跨链交易的高度筛选列表（格式：title.hit.高度 / title.ignore.起-止）。
+# 用途：主链结算平行链 commit 时跳过"已知没有跨链交易"的平行链高度，避免为查跨链交易去扫主链区块。
+# 新链的平行链从高度 0 开始、没有历史遗留 → 留空即全部按正常逻辑处理
+# （checkIsIgnoreHeight 对空列表直接返回"不忽略"）。
+# 将来某平行链某段高度确认没有跨链交易时，再加 title.ignore.a-b（零散命中用 title.hit.x 收窄区间）。
+paraCrossAssetTxHeightList=[]
 
 # autonomy 总量地址（测试=地址池 AUTOTOTAL；正式链须换项目方地址）
 [exec.sub.autonomy]
