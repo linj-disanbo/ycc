@@ -26,9 +26,8 @@ isParaChain = false
 isRecordBlockSequence = true
 singleMode = false
 
-[mempool]
-maxTxNumPerAccount = 100000
-poolCacheSize = 20240
+# [mempool] 的 poolCacheSize / maxTxNumPerAccount 已在内嵌配置（102400 / 100），
+# 此处不得重复声明（同键重复会 panic: rewrite defalut key）
 
 [p2p]
 dbPath = "datadir/addrbook"
@@ -46,9 +45,8 @@ seeds = [
   "/ip4/18.167.240.187/tcp/13801/p2p/16Uiu2HAm8r9GZPPhfXEXGYvHQNgbnRe3CiNvRkFXqioiYumm6mJj",
 ]
 
-[p2p.sub.dht.broadcast]
-disableBatchTx = true
-minLtBlockSize = 100
+# [p2p.sub.dht.broadcast] 的 disableLtBlock/disableBatchTx/minLtBlockSize 已移入 ycc.go 内嵌配置，
+# 此处不得重复声明（同键重复会 panic: rewrite defalut key）
 
 [rpc]
 certFile = "cert.pem"

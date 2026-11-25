@@ -38,13 +38,11 @@ types = ["dht"]
 waitPid = false
 dbCache = 16
 
-[p2p.sub.gossip]
-innerBounds = 300
-innerSeedEnable = true
-isSeed = false
-port = 13702
-useGithub = false
-serverStart=true
+# 说明（2026-11-25 清理）：原先这里还有 [p2p.sub.gossip] 段（innerBounds/innerSeedEnable/
+# isSeed/port/useGithub/serverStart）与 [p2p.sub.dht] maxBroadcastPeers —— 两者在本二进制里都不生效：
+#   - gossip 模块未编译进来（plugin/p2p/init 只保留 chain33 内置 dht，types=["dht"]）；
+#   - maxBroadcastPeers 字段在 chain33 v1.73.1 中已不存在。
+# 故删除以免误导运维。
 
 [p2p.sub.dht]
 #dht 版本还不稳定，暂时限定较小的连接数
@@ -52,18 +50,24 @@ maxConnectNum = 50
 # 是否配置为全节点模式，全节点保存所有分片数据，种子节点应配置为true
 # 全节点可以切换为分片节点，暂不支持分片节点切换为全节点
 isFullNode = true
-# 兼容老版本广播节点数，目前比特元网络已基本全面升级6.5.3，新版本不再支持广播发送至老版本
-# 设为1为屏蔽默认设置5
-maxBroadcastPeers = 1
 
 [p2p.sub.dht.pubsub]
+# gossipsub 拓扑参数（默认 D=6/Dhi=12/Dlo=5、心跳 1000ms、history 5/5）
 gossipSubD = 10
 gossipSubDhi = 20
 gossipSubDlo = 7
 gossipSubHeartbeatInterval = 900
 gossipSubHistoryGossip = 2
 gossipSubHistoryLength = 7
-disablePubSubMsgSign = true
+# 2026-11-25：删除 disablePubSubMsgSign=true。pubsub 消息默认用节点私钥签名+验签，
+# 关闭等于放弃这层防护（业务层仍有区块/交易签名校验），按上游参考配置保持默认开启。
+
+[p2p.sub.dht.broadcast]
+# 2026-11-25 定：与上游参考配置一致——关闭轻区块广播（大区块改走完整广播）。
+# 注意：这三项迁移到内嵌配置后，节点 ycc.toml 里不得再重复声明，否则启动 panic: rewrite defalut key
+disableLtBlock = true
+disableBatchTx = true
+minLtBlockSize = 100
 
 [address]
 defaultDriver="eth"
@@ -77,6 +81,9 @@ eth=0
 poolCacheSize = 102400
 minTxFeeRate = 100000
 maxTxFee = 1000000000     # 单笔最大交易费 10 ycc
+# 每账户在 mempool 的最大待打包交易数（生效读取点是这里的顶层键，不是 sub.score 里的同名键）。
+# 100 = 上游参考配置的默认值（原 ycc.toml 顶层写了 100000，会覆盖此处，已一并删除）
+maxTxNumPerAccount = 100
 isLevelFee = true
 name = "price"
 
