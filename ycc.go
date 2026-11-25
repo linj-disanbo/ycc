@@ -115,12 +115,14 @@ minerstart=true
 # 同高度、同总难度、同父块时，由共识模块 CmpBestBlock 裁决最优块；
 # 不开则"先到先得"，多矿工场景下各节点易选到不同块、临时分叉变长。
 enableBestBlockCmp = true
+# TODO(正式链): 创世时间戳必须按项目方启动窗口重设（当前=旧链创世时间，仅测试占位）
 genesisBlockTime=1652797628
-# 共识创世地址（测试=地址池 CGEN；正式链须换项目方地址）
+# TODO(正式链): 共识创世地址 —— 测试用地址池 CGEN，正式须换项目方地址
 genesis="0x1be592c383078b2bb1bb9e8b8fef34c589d00571"
 minerExecs=["ticket"]
 
 [consensus.sub.ticket]
+# TODO(正式链): ticket 创世时间戳同上，须与 [consensus] genesisBlockTime 一致或按启动窗口定
 genesisBlockTime=1787557086
 flushTicketInterval=3600
 
@@ -135,7 +137,8 @@ count=1000
 
 [mver.consensus]
 addWalletTx = false
-# 发展基金（测试=地址池 FUND；正式链换项目方地址）。配套 ForkTicketFundAddrV1=-1：每块 26 ycc
+# TODO(正式链): 发展基金地址 —— 测试用地址池 FUND，正式须换项目方地址。
+# 配套 ForkTicketFundAddrV1=-1：每块 26 ycc
 # 冻结在该地址于 ticket 执行器下的子账户，关票时解冻，再用 coins withdraw -e ticket 提到主余额
 fundKeyAddr = "0x0750f4a4a9360aa739cd0a169f25419da05fd3df"
 # 创世 122,551 票 @5s（calib 解析公式标定；少一票方案 2,551 → 0x1e1b6145；
@@ -235,11 +238,11 @@ addressDriver="eth"
 saveTokenTxList = false
 #配置一个空值，防止配置文件被覆盖
 tokenApprs=[]
-# relay 创世地址（测试=地址池 RGEN；正式链须换项目方地址）
+# TODO(正式链): relay 创世地址 —— 测试用地址池 RGEN，正式须换项目方地址
 [exec.sub.relay]
 genesis="0xd670b731a89c9ced148bb8134a6a056febbb8837"
 
-# 超级管理员（测试=地址池 SUPER；正式链须换项目方长期持有的地址——链上权限根）
+# TODO(正式链): 超级管理员 —— 测试用地址池 SUPER；正式须换项目方长期持有的地址（链上权限根，一旦写错无法改）
 [exec.sub.manage]
 superManager=[
     "0x5beda714eb264b084a537a1a8e1e64fbd55ec01a",
@@ -256,7 +259,7 @@ paraConsensusStopBlocks=30000
 # 将来某平行链某段高度确认没有跨链交易时，再加 title.ignore.a-b（零散命中用 title.hit.x 收窄区间）。
 paraCrossAssetTxHeightList=[]
 
-# autonomy 总量地址（测试=地址池 AUTOTOTAL；正式链须换项目方地址）
+# TODO(正式链): autonomy 总量地址 —— 测试用地址池 AUTOTOTAL，正式须换项目方地址
 [exec.sub.autonomy]
 total="0x2f17404ef6384e20674f8ee9bc428c6de4a4d84a"
 useBalance=false

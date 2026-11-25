@@ -39,6 +39,8 @@ channel = 9
 # p2p服务端口
 port = 13801
 #可以自定义设置连接节点
+# TODO(正式链): seeds 现在是旧链主网引导节点，正式链必须清空或全部替换为新链节点
+# （测试链保持为空 seeds；多节点用其中一台的 multiaddr）
 seeds = [
   "/ip4/3.112.197.178/tcp/13801/p2p/16Uiu2HAm5HWtYK211WmKBJWcT8jfbNFGTVft9w29HJqRifiBKotx",
   "/ip4/18.167.231.200/tcp/13801/p2p/16Uiu2HAmF32CeMnNa3ud2hce8F1UGZtvyvZ48SCViMiJN1QJVvcR",
@@ -67,6 +69,7 @@ wsAddr = "localhost:8548"
 wsApi = ["eth", "web3", "personal", "admin", "net"]
 
 [consensus.sub.pos33]
+# TODO(正式链): pos33 已停用，本段整段删除（旧链 pos33 引导节点，留着会去连旧网络）
 bootPeers = [
   "/ip4/18.167.231.200/tcp/10801/p2p/16Uiu2HAmErmNhtS145Lv5fe9FWrHSrNjPkp1eMLeLgi6t3sdr1of",
 ]
