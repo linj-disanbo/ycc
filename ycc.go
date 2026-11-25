@@ -1,8 +1,7 @@
 package main
 
 // ycc 这部分配置随代码发布，不能修改
-var yccconfig = `
-TxHeight = true
+var yccconfig = `TxHeight = true
 FixTime = false
 
 [log]
@@ -20,6 +19,27 @@ compress = true
 callerFile = true
 # 是否打印调用方法
 callerFunction = false
+
+[crypto]
+
+[crypto.sub.secp256k1eth]
+evmChainID=3999
+
+[address]
+# 默认地址格式仍是 eth（0x 地址，出块/新地址都按 eth 生成）
+defaultDriver="eth"
+
+[address.enableHeight]
+# 但地址体系同时支持 btc（base58）与 eth（0x）：两者都从创世启用，旧式/跨链地址仍可解析。
+# btcMultiSign(ID=1)/utxo(ID=3) 注册时默认 enableHeight=0，同样已启用，无需额外配置。
+eth=0
+btc=0
+
+[mver.blacklist.ForkAccountBlacklist]
+accountBlacklist=[]
+
+[mver.blacklist.ForkAccountBlacklistV2]
+accountBlacklist=[]
 
 [blockchain]
 maxFetchBlockNum=128
@@ -43,12 +63,6 @@ types = ["dht"]
 waitPid = false
 dbCache = 16
 
-# 说明（2026-11-25 清理）：原先这里还有 [p2p.sub.gossip] 段（innerBounds/innerSeedEnable/
-# isSeed/port/useGithub/serverStart）与 [p2p.sub.dht] maxBroadcastPeers —— 两者在本二进制里都不生效：
-#   - gossip 模块未编译进来（plugin/p2p/init 只保留 chain33 内置 dht，types=["dht"]）；
-#   - maxBroadcastPeers 字段在 chain33 v1.73.1 中已不存在。
-# 故删除以免误导运维。
-
 [p2p.sub.dht]
 #dht 版本还不稳定，暂时限定较小的连接数
 maxConnectNum = 50
@@ -64,8 +78,6 @@ gossipSubDlo = 7
 gossipSubHeartbeatInterval = 900
 gossipSubHistoryGossip = 2
 gossipSubHistoryLength = 7
-# 2026-11-25：删除 disablePubSubMsgSign=true。pubsub 消息默认用节点私钥签名+验签，
-# 关闭等于放弃这层防护（业务层仍有区块/交易签名校验），按上游参考配置保持默认开启。
 
 [p2p.sub.dht.broadcast]
 # 2026-11-25 定：与上游参考配置一致——关闭轻区块广播（大区块改走完整广播）。
@@ -73,15 +85,6 @@ gossipSubHistoryLength = 7
 disableLtBlock = true
 disableBatchTx = true
 minLtBlockSize = 100
-
-[address]
-# 默认地址格式仍是 eth（0x 地址，出块/新地址都按 eth 生成）
-defaultDriver="eth"
-[address.enableHeight]
-# 但地址体系同时支持 btc（base58）与 eth（0x）：两者都从创世启用，旧式/跨链地址仍可解析。
-# btcMultiSign(ID=1)/utxo(ID=3) 注册时默认 enableHeight=0，同样已启用，无需额外配置。
-eth=0
-btc=0
 
 [mempool]
 # 2026-11-25 定：与上游参考配置一致
@@ -95,6 +98,9 @@ maxTxFee = 1000000000     # 单笔最大交易费 10 ycc
 maxTxNumPerAccount = 100
 isLevelFee = true
 name = "price"
+
+[mver.mempool.ForkMaxTxFeeV1]
+maxTxFee = 5000000000
 
 [mempool.sub.score]
 poolCacheSize=102400
@@ -145,21 +151,6 @@ fundKeyAddr = "0x0750f4a4a9360aa739cd0a169f25419da05fd3df"
 # 若改多一票 122,552 票则为 0x1e1b6137。旧值 0x1e528e0c 是按 40,645 票）
 powLimitBits = "0x1e1b6145"
 maxTxNumber = 1500          # 单块最多交易数。必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）；
-                            # 2026-11-25 定：与上游参考配置一致（原 30000 是压测遗留）
-
-# 单笔交易最大手续费的上限（fork 覆盖）：ForkMaxTxFeeV1 在本链从创世启用(=0)，
-# 因此自创世起生效，取值与上游参考配置一致（5e9 = 50 ycc）。
-[mver.mempool.ForkMaxTxFeeV1]
-maxTxFee = 5000000000
-
-[mver.consensus.pos33]
-ticketPrice1=10000
-ticketPrice2=100000
-minerFeePersent=10 
-rewardTransfer=1
-blockReward=15
-voteRewardPersent=25
-mineRewardPersent=11
 
 [mver.consensus.ticket]
 coinReward = 43        # 2026-09-18 定稿：每块挖矿奖励 43 ycc（新链 5s 块，总增发 69 ycc/块 ≈ 旧 pos33 13.8 ycc/s；bty 口径 5:3 的 5）
@@ -176,13 +167,14 @@ targetTimespan = 2304
 targetTimePerBlock = 5
 retargetAdjustmentFactor = 4
 
-# 账户黑名单：ForkAccountBlacklist/V2 在 [fork.system] 中开启（=0）时，
-# 对应的 [mver.blacklist.<fork>] 段必须存在，否则启动 panic；ycc 无存量名单，配空列表
-[mver.blacklist.ForkAccountBlacklist]
-accountBlacklist=[]
-
-[mver.blacklist.ForkAccountBlacklistV2]
-accountBlacklist=[]
+[mver.consensus.pos33]
+ticketPrice1=10000
+ticketPrice2=100000
+minerFeePersent=10 
+rewardTransfer=1
+blockReward=15
+voteRewardPersent=25
+mineRewardPersent=11
 
 [store]
 dbCache = 256
@@ -208,11 +200,6 @@ storedbVersion = "2.0.0"
 #   - enableMVCCPrune 默认 false → pruneMVCCHeight 也不生效。
 enableMVCCIter = true
 
-[crypto]
-
-[crypto.sub.secp256k1eth]
-evmChainID=3999
-
 [wallet]
 dbCache = 16
 driver = "leveldb"
@@ -226,28 +213,19 @@ signType = "secp256k1"
 enableMVCC = false
 enableStat = false
 
-
 [exec.sub.coins]
 disableAddrReceiver = true
 disableCheckTxAmount = true
 friendExecer=["evm"]
 
-[exec.sub.evm]
-evmGasLimit=5000000
-ethMapFromExecutor="coins"
-ethMapFromSymbol="ycc"
-addressDriver="eth"
-
-
 [exec.sub.token]
 saveTokenTxList = false
 #配置一个空值，防止配置文件被覆盖
 tokenApprs=[]
-# TODO(正式链): relay 创世地址 —— 测试用地址池 RGEN，正式须换项目方地址
+
 [exec.sub.relay]
 genesis="0xd670b731a89c9ced148bb8134a6a056febbb8837"
 
-# TODO(正式链): 超级管理员 —— 测试用地址池 SUPER；正式须换项目方长期持有的地址（链上权限根，一旦写错无法改）
 [exec.sub.manage]
 superManager=[
     "0x5beda714eb264b084a537a1a8e1e64fbd55ec01a",
@@ -264,7 +242,6 @@ paraConsensusStopBlocks=30000
 # 将来某平行链某段高度确认没有跨链交易时，再加 title.ignore.a-b（零散命中用 title.hit.x 收窄区间）。
 paraCrossAssetTxHeightList=[]
 
-# TODO(正式链): autonomy 总量地址 —— 测试用地址池 AUTOTOTAL，正式须换项目方地址
 [exec.sub.autonomy]
 total="0x2f17404ef6384e20674f8ee9bc428c6de4a4d84a"
 useBalance=false
@@ -331,8 +308,12 @@ boardPeriod=518400
 #4w高度，大概2天 (未生效)
 itemWaitBlockNumber=40000 
 
-#系统中所有的fork,默认用chain33的测试网络的
-#但是我们可以替换
+[exec.sub.evm]
+evmGasLimit=5000000
+ethMapFromExecutor="coins"
+ethMapFromSymbol="ycc"
+addressDriver="eth"
+
 [fork.system]
 ForkChainParamV1=0
 ForkCheckTxDup=0
@@ -382,17 +363,26 @@ ForkTxChainIDStrict=0
 ForkEthSignEnvelope=0
 ForkGenesisOnlyAtHeightZero=0
 
-[fork.sub.coins]
+[fork.sub.evm]
 Enable=0
-ForkFriendExecer=0
-
-[fork.sub.pos33]
-# -1 = 停用 pos33 执行器（driver 激活高度=MaxHeight → LoadDriver 失败 → 交易在 checkTx 处
-# 以 ErrExecNameNotAllow 被拒）。pos33 已在迁移中被 ticket 取代，交易重放依赖此停用 + txhash 索引。
-Enable=-1
-ForkReward15=0 
-ForkFixReward=0
-UseEntrust=0
+ForkEVMState=0
+ForkEVMABI=0
+ForkEVMFrozen=0
+ForkEVMKVHash=0
+ForkEVMYoloV1=0
+ForkEVMTxGroup=0
+ForkEVMMixAddress=0
+ForkEVMAddressInit=0
+ForkIntrinsicGas=0
+ForkEvmExecNonce=0
+#chain33 v1.72.0/plugin v1.74.0 新增，必须显式声明（默认 0 = 从高度 0 生效）
+ForkEvmExecNonceV2=0
+#plugin v1.76.x 新增（同样必须声明）：ForkEVMSuicidePayer 默认 0；ForkEVMTransferRevert 默认 MaxHeight→-1
+ForkEVMSuicidePayer=0
+# 新链从 0 开启：EVM value transfer 可回滚（修复"回滚后虚余额仍可花"）。
+# 上游默认 MaxHeight 只是要求链显式 opt-in；参考配置在 48206000 开启。
+ForkEVMTransferRevert=0
+ForkEVMFixOverflow=0
 
 [fork.sub.rollup]
 # rollup 执行器激活高度：新链从 0 启用（2026-11-25 定；旧链是未来高度 36,000,000）
@@ -402,8 +392,9 @@ ForkSecurityHardening=0
 [fork.sub.none]
 ForkUseTimeDelay=0
 
-# 说明（2026-11-25）：evmxgo 执行器未编译进本二进制（plugin/dapp/init 未 import），
-# 原 [fork.sub.evmxgo] 段一并删除（保留会 panic: exec fork not exist in code）。
+[fork.sub.coins]
+Enable=0
+ForkFriendExecer=0
 
 [fork.sub.ticket]
 Enable=0
@@ -412,6 +403,14 @@ ForkTicketVrf = 0
 # plugin v1.76.x 新增：关闭重复票、挖矿交易(tx[0])执行器必须为 ticket（均为安全加固，新链从 0 开启）
 ForkTicketCloseDup=0
 ForkMinerExecerCheck=0
+
+[fork.sub.pos33]
+# -1 = 停用 pos33 执行器（driver 激活高度=MaxHeight → LoadDriver 失败 → 交易在 checkTx 处
+# 以 ErrExecNameNotAllow 被拒）。pos33 已在迁移中被 ticket 取代，交易重放依赖此停用 + txhash 索引。
+Enable=-1
+ForkReward15=0 
+ForkFixReward=0
+UseEntrust=0
 
 [fork.sub.retrieve]
 Enable=0
@@ -472,27 +471,6 @@ Enable=0
 ForkAutonomyDelRule=0
 ForkAutonomyEnableItem=0
 
-[fork.sub.evm]
-Enable=0
-ForkEVMState=0
-ForkEVMABI=0
-ForkEVMFrozen=0
-ForkEVMKVHash=0
-ForkEVMYoloV1=0
-ForkEVMTxGroup=0
-ForkEVMMixAddress=0
-ForkEVMAddressInit=0
-ForkIntrinsicGas=0
-ForkEvmExecNonce=0
-#chain33 v1.72.0/plugin v1.74.0 新增，必须显式声明（默认 0 = 从高度 0 生效）
-ForkEvmExecNonceV2=0
-#plugin v1.76.x 新增（同样必须声明）：ForkEVMSuicidePayer 默认 0；ForkEVMTransferRevert 默认 MaxHeight→-1
-ForkEVMSuicidePayer=0
-# 新链从 0 开启：EVM value transfer 可回滚（修复"回滚后虚余额仍可花"）。
-# 上游默认 MaxHeight 只是要求链显式 opt-in；参考配置在 48206000 开启。
-ForkEVMTransferRevert=0
-ForkEVMFixOverflow=0
-
 [fork.sub.unfreeze]
 Enable=0
 ForkTerminatePart=0
@@ -500,10 +478,6 @@ ForkUnfreezeIDX=0
 
 [fork.sub.store-kvmvccmavl]
 ForkKvmvccmavl=0
-
-# 说明（2026-11-25）：原先此处有 [Fork.sub.exchange]（Enable + ForkFix1 + ForkParamV1~V29）。
-# exchange 执行器未编译进本二进制（plugin/dapp/init 未 import），配置里再声明会触发
-# "exec fork not exist in code" 启动 panic，故随 import 一并删除。
 
 [health]
 checkInterval=1
