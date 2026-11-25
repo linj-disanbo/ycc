@@ -1,12 +1,15 @@
 // build 工具：把转换后的状态写入新链 datadir（离线预载）。
 //
-// 用法：
+// 用法（2026-11-25 新方案：创世状态为空 → 不写 store.db，不预载状态）：
 //
-//	build -datadir <新datadir> -state out/state.bin -local out/local.bin
+//	build -datadir <新datadir> -local txhash.bin -local evmnonce.bin
 //
 // 写入内容：
-//  1. <datadir>/kvmvcc/store.db   : 每个状态键写入 .-mvcc-.d.<key>.00000000000000000000（版本0）
-//  2. <datadir>/blockchain.db     : 本地键（LODB-ticket-*，与区块同库）
+//
+//	<datadir>/blockchain.db : 本地键（防重放索引 TX:/STX:、eth nonce 等）
+//
+// 说明：新链创世状态为空——ycc 由创世票铸出、票由创世块生成，故本工具不再写 <datadir>/kvmvcc/store.db
+// （store.db 由节点首次启动时自行创建）。这也让 `-state` 参数彻底移除。
 //
 // 新链节点首次启动：创世块无交易 → 空变更集 → kvmvcc 自动注册版本0 元信息（stateHash=空变更集哈希），
 // 预载的版本0 数据即成为创世状态。之后 ticket 共识从高度 1 正常出块。
@@ -29,32 +32,17 @@ import (
 
 func main() {
 	datadir := flag.String("datadir", "datadir", "新链 datadir 目录（须为空或不存在）")
-	stateFile := flag.String("state", "out/state.bin", "状态键文件")
 	var localFiles strList
 	flag.Var(&localFiles, "local", "本地键文件（可重复；支持 gob 与 YCCKV1 两种格式）")
 	flag.Parse()
 
-	storePath := path.Join(*datadir, "kvmvcc", "store.db")
 	blockPath := path.Join(*datadir, "blockchain.db")
-	if err := os.MkdirAll(path.Dir(storePath), 0o755); err != nil {
+	if err := os.MkdirAll(*datadir, 0o755); err != nil {
 		log.Fatalf("创建目录失败: %v", err)
 	}
+	log.Printf("本地键文件 %d 个（不写 store.db：创世状态为空）", len(localFiles))
 
-	stateKVs := loadKVFile(*stateFile)
-	log.Printf("状态键 %d 个，本地键文件 %d 个", len(stateKVs), len(localFiles))
-
-	// 1) store.db：版本0 数据键
-	sdb, err := leveldb.OpenFile(storePath, nil)
-	if err != nil {
-		log.Fatalf("打开 store.db 失败: %v", err)
-	}
-	writeChunked(sdb, stateKVs, func(kv *types.KeyValue) []byte { return migrate.MVCCDataKey(kv.Key, 0) })
-	if err := sdb.Close(); err != nil {
-		log.Fatalf("关闭 store.db 失败: %v", err)
-	}
-	log.Printf("store.db 写入完成: %s", storePath)
-
-	// 2) blockchain.db：LODB-* 本地键
+	// blockchain.db：本地键
 	bdb, err := leveldb.OpenFile(blockPath, nil)
 	if err != nil {
 		log.Fatalf("打开 blockchain.db 失败: %v", err)

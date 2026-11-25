@@ -23,12 +23,12 @@ callerFunction = false
 
 [blockchain]
 maxFetchBlockNum=128
-timeoutSeconds=1
+timeoutSeconds=5     # 2026-11-25 定：与上游参考配置一致（原 1）
 batchBlockNum=128
 isStrongConsistency=false
 onChainTimeout=1
 driver="leveldb"
-defCacheSize = 256
+defCacheSize = 128   # 2026-11-25 定：与上游参考配置一致（原 256）
 
 [p2p]
 enable=true
@@ -71,29 +71,34 @@ defaultDriver="eth"
 eth=0
 
 [mempool]
+# 2026-11-25 定：与上游参考配置一致
+# 原值：maxTxFeeRate=10000000(等于默认 1e7，删掉)、isLevelFee=false、maxTxFee=1e8、
+#       poolCacheSize 未设(默认 10240)、enableEthCheck=true(已 Deprecated，未使用)
+poolCacheSize = 102400
 minTxFeeRate = 100000
-maxTxFeeRate = 10000000
-isLevelFee = false
-maxTxFee=100000000
+maxTxFee = 1000000000     # 单笔最大交易费 10 ycc
+isLevelFee = true
 name = "price"
-enableEthCheck=true
 
 [mempool.sub.score]
-poolCacheSize=1024000
+poolCacheSize=102400
 minTxFee=100000
-maxTxNumPerAccount=100000
+# 每账户在 mempool 的最大待打包交易数：100（原 100000，压测遗留）
+# ⚠ 空投/批量关票脚本单账户单批不得超过该值，否则交易会被拒
+maxTxNumPerAccount=100
 timeParam=1      #时间占价格比例
 priceConstant=1544  #手续费相对于时间的一个合适的常量,取当前unxi时间戳前四位数,排序时手续费高1e-5~=快1s
 pricePower=1     #常量比例
 
 [mempool.sub.price]
-poolCacheSize = 1024000
+poolCacheSize = 102400
 
 [consensus]
 name="ticket"
 minerstart=true
 genesisBlockTime=1652797628
-genesis="0xf39e69a8f2c1041edd7616cf079c7084bb7a5242"
+# 共识创世地址（测试=地址池 CGEN；正式链须换项目方地址）
+genesis="0x1be592c383078b2bb1bb9e8b8fef34c589d00571"
 minerExecs=["ticket"]
 
 [consensus.sub.ticket]
@@ -111,9 +116,14 @@ count=1000
 
 [mver.consensus]
 addWalletTx = false
-fundKeyAddr = "0x92dd51393c77fd07c5840ae28076b7e0f072c289"
-powLimitBits = "0x1e528e0c"  # 真实链 40645 票 @5s（transform/calib 解析公式标定）
-maxTxNumber = 30000         # 必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）
+# 发展基金（测试=地址池 FUND；正式链换项目方地址）。配套 ForkTicketFundAddrV1=-1：每块 26 ycc
+# 冻结在该地址于 ticket 执行器下的子账户，关票时解冻，再用 coins withdraw -e ticket 提到主余额
+fundKeyAddr = "0x0750f4a4a9360aa739cd0a169f25419da05fd3df"
+# 创世 122,551 票 @5s（calib 解析公式标定；少一票方案 2,551 → 0x1e1b6145；
+# 若改多一票 122,552 票则为 0x1e1b6137。旧值 0x1e528e0c 是按 40,645 票）
+powLimitBits = "0x1e1b6145"
+maxTxNumber = 1500          # 单块最多交易数。必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）；
+                            # 2026-11-25 定：与上游参考配置一致（原 30000 是压测遗留）
 
 [mver.consensus.pos33]
 ticketPrice1=10000
@@ -128,10 +138,13 @@ mineRewardPersent=11
 coinReward = 43        # 2026-09-18 定稿：每块挖矿奖励 43 ycc（新链 5s 块，总增发 69 ycc/块 ≈ 旧 pos33 13.8 ycc/s；bty 口径 5:3 的 5）
 coinDevFund = 26       # 2026-09-18 定稿：每块发展基金 26 ycc（5:3 的 3，增发给 fundKeyAddr；必须是整数——写成 26.0 会被 toml 解析为 float64 → MGInt 返回 0）
 ticketPrice = 100000   # 与 ycc pos33 一致（UseEntrust=0 → 全程 ticketPrice2=100000），即 10 万 ycc/张
-futureBlockTime = 16
-ticketFrozenTime = 5
-ticketWithdrawTime = 10
-ticketMinerWaitTime = 2
+futureBlockTime = 15      # 2026-11-25 定：与上游参考配置一致（原 16）。CheckBlock 校验 blockTime-now > 15s → ErrFutureBlock
+# 以下三个时间参数的【单位是秒】（不是块），且对创世票（IsGenesis=true）不生效：
+# 创世票可立即挖、立即关；只约束用户后续新买的票（源码里仅在非创世票时检查）。
+# 2026-11-25 定：与上游参考配置保持一致。
+ticketFrozenTime = 43200    # 12h：新买的票要等 12h 才可用于出块（防快速倒手）
+ticketWithdrawTime = 172800 # 48h：买票后 48h 内不能关票/提取
+ticketMinerWaitTime = 7200  # 2h：已挖矿的票要等 2h 才能关闭
 targetTimespan = 2304
 targetTimePerBlock = 5
 retargetAdjustmentFactor = 4
@@ -147,7 +160,17 @@ accountBlacklist=[]
 [store]
 dbCache = 256
 driver = "leveldb"
-name = "kvmvcc"
+# 与上游参考配置同名：kvmvccmavl = "kvmvcc + mavl" 混合 store，不是另一种数据格式。
+# 两者共用同一 MVCC 布局（.-mvcc-.d.<key>.<20位版本>），差别只在 kvmvccmavl 多一层 mavl 写路径：
+#   height <  ForkKvmvccmavl → mavl + kvmvcc 双写
+#   height >= ForkKvmvccmavl → 只写 kvmvcc（mavl 退役）
+# ycc 的 ForkKvmvccmavl=0 → 从创世起就是"纯 kvmvcc"，mavl 层不写；行为与 name="kvmvcc" 等价。
+# 这样配置的目的是与上游参考配置的 store 名/代码路径保持一致（减少自研面），数据布局不变。
+name = "kvmvccmavl"
+# store 库版本（写入空链的 StoreDBMeta）。2026-11-25 定：与上游参考配置一致 = 2.0.0（原未设 → 默认 1.0.0）。
+# ⚠ 起链后不可再改：major 位变化会触发 NeedReExec（EnableReExecLocal=true 时会 delAllKeys 清空 localdb，
+#   防重放 TX:/STX: 索引随之丢失）。所以必须在建链前定死。
+storedbVersion = "2.0.0"
 
 [store.sub.kvmvcc]
 enableMVCC = false
@@ -211,12 +234,14 @@ addressDriver="eth"
 saveTokenTxList = false
 #配置一个空值，防止配置文件被覆盖
 tokenApprs=[]
+# relay 创世地址（测试=地址池 RGEN；正式链须换项目方地址）
 [exec.sub.relay]
-genesis="0x6b0a9bdf4d994c359fe02a74b538cf3f27b83f0a"
+genesis="0xd670b731a89c9ced148bb8134a6a056febbb8837"
 
+# 超级管理员（测试=地址池 SUPER；正式链须换项目方长期持有的地址——链上权限根）
 [exec.sub.manage]
 superManager=[
-    "0xf27a1b1a548b7bf380c5011364670b5218edc54b", 
+    "0x5beda714eb264b084a537a1a8e1e64fbd55ec01a",
 ]
 
 [exec.sub.paracross]
@@ -224,8 +249,9 @@ nodeGroupFrozenCoins=0
 #平行链共识停止后主链等待的高度
 paraConsensusStopBlocks=30000
 
+# autonomy 总量地址（测试=地址池 AUTOTOTAL；正式链须换项目方地址）
 [exec.sub.autonomy]
-total="0x6950e4d7a94947b1f36265828de26c13ba3dee69"
+total="0x2f17404ef6384e20674f8ee9bc428c6de4a4d84a"
 useBalance=false
 
 [mver.autonomy]
@@ -295,7 +321,8 @@ itemWaitBlockNumber=40000
 [fork.system]
 ForkChainParamV1=0
 ForkCheckTxDup=0
-ForkBlockHash=5000000
+# 区块 hash 算法分叉：新链从创世即用 HashNew（旧链当年在 5,000,000 高度才切；新链无历史不需要切点）
+ForkBlockHash=0
 ForkMinerTime=0
 ForkTransferExec=0
 ForkExecKey=0
@@ -320,7 +347,9 @@ ForkTicketFundAddrV1=-1 #fork6.3
 ForkRootHash=0 
 #eth address key format fork
 ForkFormatAddressKey=0
-ForkCheckEthTxSort=36000000
+# mempool 打包时对 eth 签名交易按 nonce 升序排序（metamask 交易必需）。
+# 旧链是未来高度 36,000,000（≈5.7 年，等于永不开启）；新链从 0 开启。
+ForkCheckEthTxSort=0
 #chain33 v1.72.0 起要求以下 fork 必须在配置中显式声明（缺失会 panic: system fork X not config）
 #取值规则：参考链（chain33 v1.72.x + plugin v1.74.0）已开启的 fork → ycc 新链从高度 0 开启；未开启的 → -1 关闭
 ForkEthAddressFormat=0
@@ -351,7 +380,8 @@ ForkFixReward=0
 UseEntrust=0
 
 [fork.sub.rollup]
-Enable=36000000
+# rollup 执行器激活高度：新链从 0 启用（2026-11-25 定；旧链是未来高度 36,000,000）
+Enable=0
 ForkSecurityHardening=0
 
 [fork.sub.none]
@@ -407,11 +437,11 @@ ForkLoopCheckCommitTxDone=0
 #fork for 6.4
 ForkParaAssetTransferRbk=0
 ForkParaSelfConsStages=0
-#仅平行链适用
+#仅平行链适用（主链无影响；与上游参考配置一致：RootHash 关闭、AutonomySuperGroup 开启）
 ForkParaFullMinerHeight=-1
-ForkParaRootHash=0
+ForkParaRootHash=-1
 ForkParaSupervision=0
-ForkParaAutonomySuperGroup = -1
+ForkParaAutonomySuperGroup = 0
 ForkParaFreeRegister = 0
 ForkParaTitleExecMatch=0
 ForkParaCheckTx=0
@@ -440,7 +470,9 @@ ForkEvmExecNonce=0
 ForkEvmExecNonceV2=0
 #plugin v1.76.x 新增（同样必须声明）：ForkEVMSuicidePayer 默认 0；ForkEVMTransferRevert 默认 MaxHeight→-1
 ForkEVMSuicidePayer=0
-ForkEVMTransferRevert=-1
+# 新链从 0 开启：EVM value transfer 可回滚（修复"回滚后虚余额仍可花"）。
+# 上游默认 MaxHeight 只是要求链显式 opt-in；参考配置在 48206000 开启。
+ForkEVMTransferRevert=0
 ForkEVMFixOverflow=0
 
 [fork.sub.unfreeze]
