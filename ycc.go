@@ -438,10 +438,10 @@ ForkParaAssetTransferRbk=0
 ForkParaSelfConsStages=0
 #仅平行链适用（主链无影响）
 ForkParaFullMinerHeight=-1
-# 平行链计算 txRootHash 时使用【正确的主链高度】（此前版本恒用 0，属缺陷）。
-# 新链平行链从高度 0 起、没有历史区块按旧算法算过 → 从创世即开启（=0）。
-# 参考配置把它留 -1 是老链的历史包袱（历史区块已按旧算法计算），不适用于新链。
-ForkParaRootHash=0
+# 平行链计算 txRootHash 的高度分叉（开启后改用真实主链高度，不开则恒用 0）。
+# 2026-11-25 定：保持 -1，与参考配置完全一致（一致性优先于启用该修复分叉）。
+# 注意：日后若平行链要启用，需选一个确定高度并保证【所有平行链节点】同一配置，否则共识分裂。
+ForkParaRootHash=-1
 ForkParaSupervision=0
 ForkParaAutonomySuperGroup = 0
 ForkParaFreeRegister = 0
