@@ -29,6 +29,11 @@ isStrongConsistency=false
 onChainTimeout=1
 driver="leveldb"
 defCacheSize = 128   # 2026-11-25 定：与上游参考配置一致（原 256）
+# 分片 chunk 的粒度：每 N 个区块打成一个 chunk（默认 1 = 每块一个 chunk，元数据量极大）。
+# ⚠ 起链后不可更改：chunk 边界会写入分片记录，各节点必须一致
+chunkblockNum = 1000
+# 保留最近 N 个区块不参与分片归档：安全分片高度 = height - 10000(MaxRollBlockNum) - chunkblockNum - 本值
+reservedBlockNum = 300000
 
 [p2p]
 enable=true
@@ -107,6 +112,9 @@ poolCacheSize = 102400
 [consensus]
 name="ticket"
 minerstart=true
+# 同高度、同总难度、同父块时，由共识模块 CmpBestBlock 裁决最优块；
+# 不开则"先到先得"，多矿工场景下各节点易选到不同块、临时分叉变长。
+enableBestBlockCmp = true
 genesisBlockTime=1652797628
 # 共识创世地址（测试=地址池 CGEN；正式链须换项目方地址）
 genesis="0x1be592c383078b2bb1bb9e8b8fef34c589d00571"
