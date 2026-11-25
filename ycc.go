@@ -147,9 +147,11 @@ addWalletTx = false
 # 配套 ForkTicketFundAddrV1=-1：每块 26 ycc
 # 冻结在该地址于 ticket 执行器下的子账户，关票时解冻，再用 coins withdraw -e ticket 提到主余额
 fundKeyAddr = "0x0750f4a4a9360aa739cd0a169f25419da05fd3df"
-# 创世 122,551 票 @5s（calib 解析公式标定；少一票方案 2,551 → 0x1e1b6145；
-# 若改多一票 122,552 票则为 0x1e1b6137。旧值 0x1e528e0c 是按 40,645 票）
-powLimitBits = "0x1e1b6145"
+# 创世 122,564 票 @5s（calib -tickets 122564 -targetSec 5 解析标定）。
+# 注：创世块会去重同 miner 的 coins.Genesis gas 交易（17 笔 → 4 笔），
+# 故铸币 = 票面 122,564×100,000 + gas 4×100,000 = 12,256,800,000 ycc（比旧链总量少 44,665.85）。
+# 旧值 0x1e528e0c 是按 40,645 票。
+powLimitBits = "0x1e1b6087"
 maxTxNumber = 1500          # 单块最多交易数。必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）；
 
 [mver.consensus.ticket]
