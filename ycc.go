@@ -436,9 +436,12 @@ ForkLoopCheckCommitTxDone=0
 #fork for 6.4
 ForkParaAssetTransferRbk=0
 ForkParaSelfConsStages=0
-#仅平行链适用（主链无影响；与上游参考配置一致：RootHash 关闭、AutonomySuperGroup 开启）
+#仅平行链适用（主链无影响）
 ForkParaFullMinerHeight=-1
-ForkParaRootHash=-1
+# 平行链计算 txRootHash 时使用【正确的主链高度】（此前版本恒用 0，属缺陷）。
+# 新链平行链从高度 0 起、没有历史区块按旧算法算过 → 从创世即开启（=0）。
+# 参考配置把它留 -1 是老链的历史包袱（历史区块已按旧算法计算），不适用于新链。
+ForkParaRootHash=0
 ForkParaSupervision=0
 ForkParaAutonomySuperGroup = 0
 ForkParaFreeRegister = 0
