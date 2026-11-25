@@ -17,13 +17,18 @@ batchsync = false
 dbCache = 512
 dbPath = "datadir"
 disableBlockBroadcast = false
-disableShard = true
 enablePushSubscribe = false
 enableReExecLocal = false
 enableReduceLocaldb = true
 enableTxQuickIndex = true
 isParaChain = false
-isRecordBlockSequence = true
+# 2026-11-25 定：与上游参考配置一致 —— 不记录区块序列
+# 注意：isRecordBlockSequence/enableReduceLocaldb 是"单向门"，已同步节点改值不会补历史，通常要重同步
+isRecordBlockSequence = false
+# 2026-11-25 定：与上游参考配置一致 —— 启用分片功能（原 true=关闭，会让 chunkblockNum/reservedBlockNum 失效）
+disableShard = false
+# 与分片配套：从 p2pstore 拉取分片数据（仅 disableShard=false 时生效）
+enableFetchP2pstore = true
 singleMode = false
 
 # [mempool] 的 poolCacheSize / maxTxNumPerAccount 已在内嵌配置（102400 / 100），
@@ -38,6 +43,8 @@ grpcLogFile = "grpc33.log"
 channel = 9
 # p2p服务端口
 port = 13801
+# 2026-11-25 定：与上游参考配置一致 —— 对端最低版本限制（空 = 允许所有版本）
+verLimit = "6.9.0"
 #可以自定义设置连接节点
 # TODO(正式链): seeds 现在是旧链主网引导节点，正式链必须清空或全部替换为新链节点
 # （测试链保持为空 seeds；多节点用其中一台的 multiaddr）
@@ -62,6 +69,10 @@ whitelist = ["127.0.0.1"]
 
 [rpc.sub.eth]
 enable = false
+# 2026-11-25 定：与上游参考配置一致 —— eth RPC 返回 RLP 交易哈希
+# 注意：上游注释建议配合 enableTxQuickIndex=false 使用；参考配置本身是 true（保持与其一致）
+enableRlpTxHash = true
+disableQuickGas = false
 httpAddr = "localhost:8547"
 httpApi = ["eth", "web3", "personal", "admin", "net"]
 # websocket 绑定地址

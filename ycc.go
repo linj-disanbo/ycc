@@ -147,6 +147,11 @@ powLimitBits = "0x1e1b6145"
 maxTxNumber = 1500          # 单块最多交易数。必须内嵌（缺失时 MaxTxNumber=0 → 同步区块 ErrManyTx）；
                             # 2026-11-25 定：与上游参考配置一致（原 30000 是压测遗留）
 
+# 单笔交易最大手续费的上限（fork 覆盖）：ForkMaxTxFeeV1 在本链从创世启用(=0)，
+# 因此自创世起生效，取值与上游参考配置一致（5e9 = 50 ycc）。
+[mver.mempool.ForkMaxTxFeeV1]
+maxTxFee = 5000000000
+
 [mver.consensus.pos33]
 ticketPrice1=10000
 ticketPrice2=100000
