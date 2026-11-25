@@ -493,38 +493,9 @@ ForkUnfreezeIDX=0
 [fork.sub.store-kvmvccmavl]
 ForkKvmvccmavl=0
 
-[Fork.sub.exchange]
-Enable=0
-ForkFix1=0
-ForkParamV1 = 0
-ForkParamV2 = 0
-ForkParamV3 = 0
-ForkParamV4 = 0
-ForkParamV5 = 0
-ForkParamV6 = 0
-ForkParamV7 = 0
-ForkParamV8 = 0
-ForkParamV9 = 0
-ForkParamV10 = 0
-ForkParamV11 = 0
-ForkParamV12 = 0
-ForkParamV13 = 0
-ForkParamV14 = 0
-ForkParamV15 = 0
-ForkParamV16 = 0
-ForkParamV17 = 0
-ForkParamV18 = 0
-ForkParamV19 = 0
-ForkParamV20 = 0
-ForkParamV21 = 0
-ForkParamV22 = 0
-ForkParamV23 = 0
-ForkParamV24 = 0
-ForkParamV25 = 0
-ForkParamV26 = 0
-ForkParamV27 = 0
-ForkParamV28 = 0
-ForkParamV29 = 0
+# 说明（2026-11-25）：原先此处有 [Fork.sub.exchange]（Enable + ForkFix1 + ForkParamV1~V29）。
+# exchange 执行器未编译进本二进制（plugin/dapp/init 未 import），配置里再声明会触发
+# "exec fork not exist in code" 启动 panic，故随 import 一并删除。
 
 [health]
 checkInterval=1
