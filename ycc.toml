@@ -2,7 +2,7 @@ ChainID = 999
 CoinPrecision = 100000000
 CoinSymbol = "ycc"
 Title = "ycc"
-version = "1.0.0"
+version = "2.0.0"
 
 [log]
 # 日志级别，支持debug(dbug)/info/warn/error(eror)/crit

@@ -394,8 +394,8 @@ ForkSecurityHardening=0
 [fork.sub.none]
 ForkUseTimeDelay=0
 
-[fork.sub.evmxgo]
-Enable=0
+# 说明（2026-11-25）：evmxgo 执行器未编译进本二进制（plugin/dapp/init 未 import），
+# 原 [fork.sub.evmxgo] 段一并删除（保留会 panic: exec fork not exist in code）。
 
 [fork.sub.ticket]
 Enable=0
