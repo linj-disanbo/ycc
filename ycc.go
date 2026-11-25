@@ -70,9 +70,13 @@ disableBatchTx = true
 minLtBlockSize = 100
 
 [address]
+# 默认地址格式仍是 eth（0x 地址，出块/新地址都按 eth 生成）
 defaultDriver="eth"
 [address.enableHeight]
+# 但地址体系同时支持 btc（base58）与 eth（0x）：两者都从创世启用，旧式/跨链地址仍可解析。
+# btcMultiSign(ID=1)/utxo(ID=3) 注册时默认 enableHeight=0，同样已启用，无需额外配置。
 eth=0
+btc=0
 
 [mempool]
 # 2026-11-25 定：与上游参考配置一致
