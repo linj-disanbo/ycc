@@ -172,32 +172,14 @@ name = "kvmvccmavl"
 #   防重放 TX:/STX: 索引随之丢失）。所以必须在建链前定死。
 storedbVersion = "2.0.0"
 
-[store.sub.kvmvcc]
-enableMVCC = false
-enableMavlPrefix = false
-
-[store.sub.mavl]
-enableMVCC = false
-enableMavlPrefix = true
-enableMavlPrune = true
-enableMemTree = true
-enableMemVal = true
-pruneHeight = 10000
-# 缓存close ticket数目，该缓存越大同步速度越快，最大设置到1500000,默认200000
-tkCloseCacheLen = 200000
-
 [store.sub.kvmvccmavl]
-enableMVCC = false
+# 唯一需要显式声明的细项：开启后 kvmvcc 使用 MVCCIter 实现，
+# IterateRangeByStateHash 才可用（关闭时该接口直接 panic，对应 RPC Chain33.GetTotalCoins）。
+# 其余细项（enableMVCC/enableMavlPrefix/enableMavlPrune/enableMemTree/enableMemVal/
+# pruneMVCCHeight/pruneMavlHeight/tkCloseCacheLen）不写即走代码默认值：
+#   - ForkKvmvccmavl=0 → mavl 层从创世起不写，mavl 相关项全部惰性；
+#   - enableMVCCPrune 默认 false → pruneMVCCHeight 也不生效。
 enableMVCCIter = true
-enableMVCCPrune = false
-enableMavlPrefix = true
-enableMavlPrune = true
-enableMemTree = true
-enableMemVal = true
-pruneMVCCHeight = 10000
-pruneMavlHeight = 10000
-# 缓存close ticket数目，该缓存越大同步速度越快，最大设置到1500000,默认200000
-tkCloseCacheLen = 200000
 
 [crypto]
 
